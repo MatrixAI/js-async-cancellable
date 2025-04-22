@@ -4,17 +4,17 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 
 > The following are some architectural observations provided by **Dean Tribble** on the [es-discuss mailing list](https://mail.mozilla.org/pipermail/es-discuss/2015-March/041887.html):
 >
-> *Cancel requests, not results*
+> _Cancel requests, not results_
 >
 > Promises are like object references for async; any particular promise might
 > be returned or passed to more than one client. Usually, programmers would
 > be surprised if a returned or passed in reference just got ripped out from
-> under them *by another client*. this is especially obvious when considering
+> under them _by another client_. this is especially obvious when considering
 > a library that gets a promise passed into it. Using "cancel" on the promise
 > is like having delete on object references; it's dangerous to use, and
 > unreliable to have used by others.
 >
-> *Cancellation is heterogeneous*
+> _Cancellation is heterogeneous_
 >
 > It can be misleading to think about canceling a single activity. In most
 > systems, when cancellation happens, many unrelated tasks may need to be
@@ -23,14 +23,14 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 > happen?
 >
 > - the async fetch of more query results should be terminated and the
-> connection closed
+>   connection closed
 > - background computation to process the remote results into renderable
-> form should be stopped
+>   form should be stopped
 > - rendering of not-yet rendered content should be stopped. this might
-> include retrieval of secondary content for the items no longer of interest
-> (e.g., album covers for the songs found by a complicated content search)
+>   include retrieval of secondary content for the items no longer of interest
+>   (e.g., album covers for the songs found by a complicated content search)
 > - the animation of "loading more" should be stopped, and should be
-> replaced with "user cancelled"
+>   replaced with "user cancelled"
 > - etc.
 >
 > Some of these are different levels of abstraction, and for any non-trivial
@@ -41,7 +41,7 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 > get passed the one that would be cancelled if the user hits stop and the
 > right thing happens.
 >
-> *Cancellation should be smart*
+> _Cancellation should be smart_
 >
 > Libraries can and should be smart about how they cancel. In the case of an
 > async query, once the result of a query from the server has come back, it
@@ -54,7 +54,7 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 > worker complete (so that you can reuse it) rather than abruptly terminate
 > it (requiring discarding of the running worker and cached state).
 >
-> *Cancellation is a race*
+> _Cancellation is a race_
 >
 > In an async system, new activities may be getting continuously scheduled by
 > asks that are themselves scheduled but not currently running. The act of
@@ -70,7 +70,7 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 > system), but that schedules work that will be cancelled (parse the
 > publication of an update to the now-cancelled query).
 >
-> *Cancellation is "don't care"*
+> _Cancellation is "don't care"_
 >
 > Because smart cancellation sometimes doesn't stop anything and in an async
 > environment, cancellation is racing with progress, it is at most "best
@@ -82,7 +82,7 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 > and transactions. It was amazing how much simpler cancellation logic
 > becomes when it's "don't care".
 >
-> *Cancellation requires separation of concerns*
+> _Cancellation requires separation of concerns_
 >
 > In the pattern where more than one thing gets cancelled, the source of the
 > cancellation is rarely one of the things to be cancelled. It would be a
@@ -92,7 +92,7 @@ This library provides the ability to cancel asynchronous tasks. Cancelling async
 > cancellation token and cancellation source mirrors that separation between
 > a promise and it's resolver.
 >
-> *Cancellation recovery is transient*
+> _Cancellation recovery is transient_
 >
 > As a task progresses, the cleanup action may change. In the example above,
 > if the data table requests more results upon scrolling, it's cancellation
