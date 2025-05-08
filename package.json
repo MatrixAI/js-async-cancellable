@@ -35,13 +35,13 @@
     "postversion": "npm install --package-lock-only --ignore-scripts --silent",
     "tsx": "tsx",
     "test": "node ./scripts/test.mjs",
-    "lint": "matrixai-lint",
-    "lintfix": "matrixai-lint --fix",
+    "lint": "matrixai-lint --shell src tests scripts",
+    "lintfix": "matrixai-lint --fix --shell src tests scripts",
     "lint-shell": "find ./src ./tests ./scripts -type f -regextype posix-extended -regex '.*\\.(sh)' -exec shellcheck {} +",
     "docs": "shx rm -rf ./docs && typedoc --gitRevision master --tsconfig ./tsconfig.build.json --out ./docs src"
   },
   "devDependencies": {
-    "@matrixai/lint": "^0.1.0",
+    "@matrixai/lint": "^0.2.1",
     "@swc/core": "^1.3.76",
     "@swc/jest": "^0.2.29",
     "@types/jest": "^29.5.2",
