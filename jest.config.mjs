@@ -1,6 +1,6 @@
 import path from 'node:path';
 import url from 'node:url';
-import tsconfigJSON from './tsconfig.json' assert { type: "json" };
+import tsconfigJSON from './tsconfig.json' with { type: 'json' };
 
 const projectPath = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -25,40 +25,47 @@ const globals = {
 const config = {
   testEnvironment: 'node',
   verbose: true,
+  testTimeout: 20000,
   collectCoverage: false,
+  coverageProvider: 'v8',
   cacheDirectory: '<rootDir>/tmp/jest',
   coverageDirectory: '<rootDir>/tmp/coverage',
   roots: ['<rootDir>/tests'],
-  testMatch: ['**/?(*.)+(spec|test|unit.test).+(ts|tsx|js|jsx)'],
+  testMatch: ['**/*.test.ts'],
   transform: {
-    "^.+\\.(t|j)sx?$": [
-      "@swc/jest",
+    '^.+\\.(t|j)sx?$': [
+      '@swc/jest',
       {
+        module: { type: 'es6' },
         jsc: {
           parser: {
-            syntax: "typescript",
+            syntax: 'typescript',
             tsx: true,
-            decorators: tsconfigJSON.compilerOptions.experimentalDecorators,
+            decorators: true,
             dynamicImport: true,
           },
           target: tsconfigJSON.compilerOptions.target.toLowerCase(),
           keepClassNames: true,
+          transform: { decoratorVersion: '2022-03' },
         },
-      }
+      },
     ],
   },
   reporters: [
     'default',
-    ['jest-junit', {
-      outputDirectory: '<rootDir>/tmp/junit',
-      classNameTemplate: '{classname}',
-      ancestorSeparator: ' > ',
-      titleTemplate: '{title}',
-      addFileAttribute: 'true',
-      reportTestSuiteErrors: 'true',
-    }],
+    [
+      'jest-junit',
+      {
+        outputDirectory: '<rootDir>/tmp/junit',
+        classNameTemplate: '{classname}',
+        ancestorSeparator: ' > ',
+        titleTemplate: '{title}',
+        addFileAttribute: 'true',
+        reportTestSuiteErrors: 'true',
+      },
+    ],
   ],
-  collectCoverageFrom: ['src/**/*.{ts,tsx,js,jsx}', '!src/**/*.d.ts'],
+  collectCoverageFrom: ['dist/**/*.js'],
   coverageReporters: ['text', 'cobertura'],
   globals,
   // Global setup script executed once before all test files
@@ -71,12 +78,9 @@ const config = {
   // Setup files after env are executed before each test file
   // after the jest test environment is installed
   // Can access globals
-  setupFilesAfterEnv: [
-    'jest-extended/all',
-    '<rootDir>/tests/setupAfterEnv.ts'
-  ],
+  setupFilesAfterEnv: ['jest-extended/all', '<rootDir>/tests/setupAfterEnv.ts'],
   moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1",
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx', '.mts'],
 };

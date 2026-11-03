@@ -1,199 +1,167 @@
 # js-async-cancellable
 
-This library provides the ability to cancel asynchronous tasks. Cancelling
-asynchronous tasks was never standardised in JavaScript. This was due to the
-myriad complexity of cancellation illustrated by
-https://github.com/tc39/proposal-cancellation:
+Cancellation providers and explicit asynchronous execution composition.
 
-> The following are some architectural observations provided by **Dean Tribble**
-> on the
-> [es-discuss mailing list](https://mail.mozilla.org/pipermail/es-discuss/2015-March/041887.html):
->
-> _Cancel requests, not results_
->
-> Promises are like object references for async; any particular promise might be
-> returned or passed to more than one client. Usually, programmers would be
-> surprised if a returned or passed in reference just got ripped out from under
-> them _by another client_. this is especially obvious when considering a
-> library that gets a promise passed into it. Using "cancel" on the promise is
-> like having delete on object references; it's dangerous to use, and unreliable
-> to have used by others.
->
-> _Cancellation is heterogeneous_
->
-> It can be misleading to think about canceling a single activity. In most
-> systems, when cancellation happens, many unrelated tasks may need to be
-> cancelled for the same reason. For example, if a user hits a stop button on a
-> large incremental query after they see the first few results, what should
-> happen?
->
-> - the async fetch of more query results should be terminated and the
->   connection closed
-> - background computation to process the remote results into renderable form
->   should be stopped
-> - rendering of not-yet rendered content should be stopped. this might include
->   retrieval of secondary content for the items no longer of interest (e.g.,
->   album covers for the songs found by a complicated content search)
-> - the animation of "loading more" should be stopped, and should be replaced
->   with "user cancelled"
-> - etc.
->
-> Some of these are different levels of abstraction, and for any non-trivial
-> application, there isn't a single piece of code that can know to terminate all
-> these activities. This kind of system also requires that cancellation support
-> is consistent across many very different types of components. But if each
-> activity takes a cancellationToken, in the above example, they just get passed
-> the one that would be cancelled if the user hits stop and the right thing
-> happens.
->
-> _Cancellation should be smart_
->
-> Libraries can and should be smart about how they cancel. In the case of an
-> async query, once the result of a query from the server has come back, it may
-> make sense to finish parsing and caching it rather than just reflexively
-> discarding it. In the case of a brokerage system, for example, the round trip
-> to the servers to get recent data is the expensive part. Once that's been
-> kicked off and a result is coming back, having it available in a local cache
-> in case the user asks again is efficient. If the application spawned another
-> worker, it may be more efficient to let the worker complete (so that you can
-> reuse it) rather than abruptly terminate it (requiring discarding of the
-> running worker and cached state).
->
-> _Cancellation is a race_
->
-> In an async system, new activities may be getting continuously scheduled by
-> asks that are themselves scheduled but not currently running. The act of
-> cancelling needs to run in this environment. When cancel starts, you can think
-> of it as a signal racing out to catch up with all the computations launched to
-> achieve the now-cancelled objective. Some of those may choose to complete (see
-> the caching example above). Some may potentially keep launching more work
-> before that work itself gets signaled (yeah it's a bug but people write buggy
-> code). In an async system, cancellation is not prompt. Thus, it's infeasible
-> to ask "has cancellation finished?" because that's not a well defined state.
-> Indeed, there can be code scheduled that should and does not get cancelled
-> (e.g., the result processor for a pub/sub system), but that schedules work
-> that will be cancelled (parse the publication of an update to the
-> now-cancelled query).
->
-> _Cancellation is "don't care"_
->
-> Because smart cancellation sometimes doesn't stop anything and in an async
-> environment, cancellation is racing with progress, it is at most "best
-> efforts". When a set of computations are cancelled, the party canceling the
-> activities is saying "I no longer care whether this completes". That is
-> importantly different from saying "I want to prevent this from completing".
-> The former is broadly usable resource reduction. The latter is only usefully
-> achieved in systems with expensive engineering around atomicity and
-> transactions. It was amazing how much simpler cancellation logic becomes when
-> it's "don't care".
->
-> _Cancellation requires separation of concerns_
->
-> In the pattern where more than one thing gets cancelled, the source of the
-> cancellation is rarely one of the things to be cancelled. It would be a
-> surprise if a library called for a cancellable activity (load this image)
-> cancelled an unrelated server query just because they cared about the same
-> cancellation event. I find it interesting that the separation between
-> cancellation token and cancellation source mirrors that separation between a
-> promise and it's resolver.
->
-> _Cancellation recovery is transient_
->
-> As a task progresses, the cleanup action may change. In the example above, if
-> the data table requests more results upon scrolling, it's cancellation
-> behavior when there's an outstanding query for more data is likely to be quite
-> different than when it's got everything it needs displayed for the current
-> page. That's the reason why the "register" method returns a capability to
-> unregister the action.
+## Candidate status
 
-This library attempts to address each concern.
+This working tree contains an unreleased breaking redesign against contexts
+v3.0.0. The unchanged package version is not a released replacement for 2.0.1.
+Do not substitute this candidate beneath consumers expecting the previous
+controller/chaining contract. No npm publication or sibling release is implied.
 
-1. Cancel requests, not results - cancellation only affects the immediate
-   promise and all downstream promises, not upstream promises unless explicitly
-   configured via a signal handler
-2. Cancellation is heterogenous - cancellation can be customised through a
-   signal handler or an `AbortController`, this allows the user to define how
-   cancellation should propagate through the application
-3. Cancellation should be smart - during the `PromiseCancellable.then` binding,
-   both the the fulfilled and rejected handler takes the `signal: AbortSignal`,
-   here it is possible to customise the logic of fulfillment and rejection
-   depending on the situation, therefore cancellation can be as smart as you
-   want it to be
-4. Cancellation is a race - this is achieved by using `AbortSignal`, one cannot
-   ask if cancellation is finished, it is purely an event driven system
-5. Cancellation is "don't care" - `PromiseCancellation.cancel` is purely
-   advisory, the default behaviour is that the immediate promise is rejected
-   early, however this can be customised, therefore the default intention is
-   that the promise can be rejected with the cancellation reason, and means you
-   don't care about the result anymore, it does not imply anything stronger than
-   this
-6. Cancellation requires separation of concerns - by supplying a signal handler
-   or abort controller, it is possible to separate any concern
-7. Cancellation recovery is transient - during the `PromiseCancellable.then`,
-   `PromiseCancellable.catch` and `PromiseCancellable.finally`, the signal is
-   passed in, it is possible to change how you cancel depending on what the
-   current situation is.
+The self-contained [execution semantics](specs/0001-execution-ontology-and-semantics/adr.md)
+is proposed. Implementation, bounded verification, requirement satisfaction,
+decision acceptance, and release approval remain separate.
 
-## Installation
+## Vocabulary and ownership
 
-```sh
-npm install --save @matrixai/async-cancellable
+An operation is deferred work; invoking it starts one execution. A scope owns
+its declared obligations through represented work and required cleanup. A waiter
+may leave before an execution finishes. Observing a signal does not grant
+authority to cancel its source.
+
+An owned cancellation source can link to a borrowed upstream signal. Upstream
+abortion reaches that source with the exact reason; local cancellation does not
+abort upstream or another independently owned source. Parent/child is only
+shorthand for this named cancellation relationship, not a universal task tree.
+
+`createCancellation(upstream)` returns an owned handle with `signal`, `cancel`,
+and `close`. An array of upstream signals selects any-source fan-in: the first
+observed request wins; already-aborted inputs are selected in input order.
+Duplicate inputs install one link. Closing unlinks idempotently, does not abort
+anything, and disables new requests through that handle. The caller must close
+only after its represented work and mandatory cleanup finish.
+
+`createCancellationScope()` is the reusable contexts provider. Each invocation
+owns a separate source and retains its links through the returned operation's
+actual completion. The body receives a new signal even when upstream is already
+aborted, so it can implement its own admission policy. Selecting `inherit: false`
+explicitly shields that propagation path; it does not clear upstream abortion.
+
+## Owned execution
+
+```ts
+import { startCancellation, completeCancellation } from '@matrixai/async-cancellable';
+
+const execution = startCancellation(async ({ signal, trace }) => {
+  signal.throwIfAborted();
+  return trace.length;
+}, { trace: 'request' });
+
+const value = await completeCancellation(execution);
 ```
 
-## Development
+`startCancellation` begins the body in a native microtask, skips body entry if
+its effective signal is already aborted, and retains links through represented
+body completion. Its handle exposes:
 
-Run `nix develop`, and once you're inside, you can use:
+- `result`: The selected result promise.
+- `completion`: An always-fulfilled, immutable fulfillment/rejection outcome
+  recording owned completion, including mandatory represented cleanup.
+- `signal` and `cancel(reason)`: Local cancellation observation and authority.
+- `wait(waitingSignal)`: A separately cancellable wait, without cancelling work.
+
+`completeCancellation(handle)` waits for actual completion and unwraps its
+outcome. An owner must retain this boundary even after an early result or an
+abandoned wait. Cancellation is cooperative: non-cooperative represented work
+can keep completion pending indefinitely. Detached work not returned or awaited
+by the operation is not magically supervised or joined.
+
+## Execution compositions
+
+`startCancellationGroup(mode, operations, context, options)` accepts operation
+factories whose executions it owns. It fully consumes and validates the iterable
+before acquiring any execution; bodies then start in native microtasks in input
+order. It does not accept promises as implicitly owned inputs.
+
+| Mode | Result | Completion |
+| --- | --- | --- |
+| `all` | All values in input order, or first observed failure. | Drains all owned inputs; additional failures are retained. |
+| `allSettled` | Every immutable fulfillment/rejection outcome in input order. | Drains all; candidate failures are explicit result data. |
+| `race` | First observed settlement. | Drains losers; unexpected loser failures remain owner-visible. |
+| `any` | First success, or input-ordered aggregate failure. | Drains all; failures observed before success are expected selection inputs, while later unexpected failures remain owner-visible. |
+
+The default `cancelRemaining: 'never'` lets remaining owned work continue, while
+still retaining its completion. Selecting `'on-selection'` requests cancellation
+of still-active inputs after result selection. It never declares those inputs
+finished. Internal selection cancellation is recognizable as an expected outcome;
+its exact value remains available in `outcomes`. All other secondary failures
+are retained in input order, without deduplicating identical rejection values.
+If both selection and secondary failures exist, completion preserves both using
+suppression. A late failure cannot retroactively change an already delivered result.
+
+Empty `all` and `allSettled` fulfill with empty arrays. Empty `any` rejects with
+an empty aggregate. Empty owning `race` rejects with a range error rather than
+holding an empty region open forever. Borrowed native promise combinators keep
+their native empty-input behavior.
+
+`startCancellationSequence` retains one effective signal across stage handoff,
+checks it before each stage, and returns the values in stage order. A request
+during a handoff prevents later startup. To select a different recovery or
+shielding policy, compose an explicitly owned scope rather than clear a signal.
+
+`startSharedCancellation` owns one source execution. Subscribers receive only
+their own waits. The default `whenIdle: 'continue'` retains the source when a
+subscriber leaves. With `'cancel'`, final departure closes subscription admission
+and requests cancellation; later subscriptions are rejected, without restarting
+the source. The owner still retains completion if the source ignores cancellation.
+Subscriber admission and departure transitions are synchronous within this
+JavaScript execution agent. No cross-agent shared-memory membership is promised.
+
+All-source/quorum signal policies, cross-agent supervision, and automatic
+ownership transfer to a detached region are not implemented by this API.
+
+## Borrowed promises and migration
+
+`waitForPromise(value, signal)` allows only wait abandonment. It does not call a
+borrowed value's cancellation method or release it. It continues observing an
+eventual rejection after the waiter leaves.
+
+`PromiseCancellable` remains a cancellable-wait facade, not an execution engine.
+Its explicit `cancellation` option is `'reject'` by default, or `'request'` to
+retain executor-represented settlement after a request. Registering a listener
+does not change that policy. It is promise-compatible, not a native Promise
+subclass. Chain methods return ordinary promises and callbacks receive ordinary
+native arguments. Static result combinators borrow their inputs and do not
+cancel them.
+
+| Previous mechanism | Explicit replacement |
+| --- | --- |
+| Inject a controller to select implicit cancellation behavior | Use source ownership and explicit facade options or an owned execution. |
+| Forward cancellation through chained signal callbacks | Use owned operation factories and a sequence, or an explicitly linked scope. |
+| Cancel a result aggregate and manually cancel its members | Use an owning execution group with declared remaining-work policy. |
+| Early rejection used as completion | Retain the execution completion handle and required cleanup. |
+| Forward a shared waiter's cancellation to the source | Use subscriber-local waiting and an explicit source-owner idle policy. |
+| Rewrite cancellation-shaped errors to undefined | Preserve arbitrary reasons; no-reason cancellation uses the native default. |
+
+Existing lock/timer consumers need deliberate migration; ordinary native chaining
+is not a replacement for their cancellation and ownership semantics.
+
+## Development and package production
+
+Use Node.js 24 or newer. The package emits one ES2022/NodeNext ESM artifact.
+Source imports are relative; tests run through the compiled package mapping.
 
 ```sh
-# install (or reinstall packages from package.json)
-npm install
-# build the dist
-npm run build
-# run the repl (this allows you to import from ./src)
-npm run tsx
-# run the tests
-npm run test
-# lint the source code
-npm run lint
-# automatically fix the source
-npm run lintfix
+nix run '.#npm' -- install --ignore-scripts --no-audit --fund=false --prefer-offline
+npm run check:conformance
+nix build '.#npm-package' '.#checks.x86_64-linux.verify' --no-link
 ```
 
-### Docs Generation
+Run installation from the repository's physical working directory, without a
+prefix override through a sibling-workspace symlink. Prepared installation
+preserves canonical Git specifications and exact commit resolutions. Recovery
+copies, including attempted manifests on recovery failure, remain under `tmp/`.
 
-```sh
-npm run docs
-```
+The flake consumes contexts from its npm-lock-selected commit, validates the
+producer descriptor, and supplies the same prepared archive to native npm and
+the hermetic import adapter. There is no second contexts flake input/pin graph.
+The producer exports the canonical npm archive, an unpacked view, package
+metadata, and direct runtime-provider descriptors. It does not bundle runtime
+dependencies or rewrite its packed manifest to local/store coordinates.
 
-See the docs at: https://matrixai.github.io/js-async-cancellable/
-
-### Publishing
-
-Publishing is handled automatically by the staging pipeline.
-
-Prerelease:
-
-```sh
-# npm login
-npm version prepatch --preid alpha # premajor/preminor/prepatch
-git push --follow-tags
-```
-
-Release:
-
-```sh
-# npm login
-npm version patch # major/minor/patch
-git push --follow-tags
-```
-
-Manually:
-
-```sh
-# npm login
-npm version patch # major/minor/patch
-npm run build
-npm publish --access public
-git push
-git push --tags
-```
+The integrated development environment and independent Nix checks share package
+scripts, not mutable state. Activation does not load credentials or change shell
+options. Lint is supplied by the selected package set; it remains paused for the
+current implementation batch. Historical generated API documentation is not the
+candidate contract and is excluded from the package.
