@@ -2,12 +2,16 @@
 
 Cancellation providers and explicit asynchronous execution composition.
 
-## Candidate status
+## Version 3 compatibility
 
-This working tree contains an unreleased breaking redesign against contexts
-v3.0.0. The unchanged package version is not a released replacement for 2.0.1.
-Do not substitute this candidate beneath consumers expecting the previous
-controller/chaining contract. No npm publication or sibling release is implied.
+Version 3 is a breaking redesign against released contexts v3.0.0. Consumers of
+the version 2 controller/chaining contract must migrate deliberately; changing
+their dependency alone is not sufficient. Git-only distribution does not imply
+npm publication or release of any downstream package.
+
+```sh
+npm install --save 'git+ssh://git@github.com/MatrixAI/js-async-cancellable.git#v3.0.0'
+```
 
 The self-contained [execution semantics](specs/0001-execution-ontology-and-semantics/adr.md)
 is proposed. Implementation, bounded verification, requirement satisfaction,
