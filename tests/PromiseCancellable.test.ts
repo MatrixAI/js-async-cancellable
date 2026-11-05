@@ -4,7 +4,10 @@ import { PromiseCancellable, waitForPromise } from '#index.js';
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
   return { promise, resolve, reject };
 }
 
@@ -28,7 +31,9 @@ describe('explicit cancellable waiting', () => {
     async (reason) => {
       const controller = new AbortController();
       controller.abort(reason);
-      await expect(waitForPromise(Promise.resolve(1), controller.signal)).rejects.toBe(reason);
+      await expect(
+        waitForPromise(Promise.resolve(1), controller.signal),
+      ).rejects.toBe(reason);
     },
   );
 
@@ -36,9 +41,13 @@ describe('explicit cancellable waiting', () => {
     const signal = new AbortController().signal;
     const remove = jest.spyOn(signal, 'removeEventListener');
     const then = jest.fn((resolve: (value: number) => void) => resolve(3));
-    await expect(waitForPromise({ then } as unknown as PromiseLike<number>, signal)).resolves.toBe(3);
+    await expect(
+      waitForPromise({ then } as unknown as PromiseLike<number>, signal),
+    ).resolves.toBe(3);
     expect(then).toHaveBeenCalledTimes(1);
-    await expect(waitForPromise(Promise.reject(undefined), signal)).rejects.toBeUndefined();
+    await expect(
+      waitForPromise(Promise.reject(undefined), signal),
+    ).rejects.toBeUndefined();
     expect(remove).toHaveBeenCalledTimes(2);
   });
 
@@ -69,7 +78,10 @@ describe('explicit cancellable waiting', () => {
       cancellation: 'request',
     });
     let settled = false;
-    const result = promise.then((value) => { settled = true; return value; });
+    const result = promise.then((value) => {
+      settled = true;
+      return value;
+    });
     promise.cancel('request');
     await Promise.resolve();
     expect(settled).toBe(false);
@@ -84,7 +96,9 @@ describe('explicit cancellable waiting', () => {
     const source = deferred<number>();
     const parent = new AbortController();
     const remove = jest.spyOn(parent.signal, 'removeEventListener');
-    const promise = PromiseCancellable.from(source.promise, { signal: parent.signal });
+    const promise = PromiseCancellable.from(source.promise, {
+      signal: parent.signal,
+    });
     const result = expect(promise).rejects.toBe('stop waiting');
     promise.cancel('stop waiting');
     await result;
@@ -96,14 +110,26 @@ describe('explicit cancellable waiting', () => {
   });
 
   test('CASE-FACADE-NATIVE: native chain and aggregation semantics do not acquire borrowed inputs', async () => {
-    await expect(PromiseCancellable.resolve(2).then((n) => n + 1)).resolves.toBe(3);
+    await expect(
+      PromiseCancellable.resolve(2).then((n) => n + 1),
+    ).resolves.toBe(3);
     expect(PromiseCancellable.resolve(1).then()).toBeInstanceOf(Promise);
-    await expect(PromiseCancellable.reject(null).catch((reason) => reason)).resolves.toBeNull();
-    await expect(PromiseCancellable.resolve(4).finally(() => {})).resolves.toBe(4);
-    await expect(PromiseCancellable.all([1, Promise.resolve(2)] as const)).resolves.toEqual([1, 2]);
-    await expect(PromiseCancellable.allSettled([Promise.reject(0)])).resolves.toEqual([{ status: 'rejected', reason: 0 }]);
+    await expect(
+      PromiseCancellable.reject(null).catch((reason) => reason),
+    ).resolves.toBeNull();
+    await expect(PromiseCancellable.resolve(4).finally(() => {})).resolves.toBe(
+      4,
+    );
+    await expect(
+      PromiseCancellable.all([1, Promise.resolve(2)] as const),
+    ).resolves.toEqual([1, 2]);
+    await expect(
+      PromiseCancellable.allSettled([Promise.reject(0)]),
+    ).resolves.toEqual([{ status: 'rejected', reason: 0 }]);
     await expect(PromiseCancellable.race([3])).resolves.toBe(3);
-    await expect(PromiseCancellable.any([Promise.reject(null), 4])).resolves.toBe(4);
+    await expect(
+      PromiseCancellable.any([Promise.reject(null), 4]),
+    ).resolves.toBe(4);
     const input = deferred<number>();
     const cancel = jest.fn();
     const borrowed = Object.assign(input.promise, { cancel });
@@ -118,7 +144,11 @@ describe('explicit cancellable waiting', () => {
 
   test('CASE-FACADE-THROW: synchronous executor failure and default abort reason are not rewritten', async () => {
     const reason = new DOMException('source rejection', 'AbortError');
-    await expect(new PromiseCancellable(() => { throw reason; })).rejects.toBe(reason);
+    await expect(
+      new PromiseCancellable(() => {
+        throw reason;
+      }),
+    ).rejects.toBe(reason);
     const pending = new PromiseCancellable(() => {});
     const observed = pending.catch((failure) => failure);
     pending.cancel();

@@ -44,14 +44,17 @@ class PromiseCancellable<T> implements Promise<T> {
         throw primary;
       },
     );
-    this.promise = mode === 'request'
-      ? completion
-      : waitForPromise(completion, this.signal);
+    this.promise =
+      mode === 'request' ? completion : waitForPromise(completion, this.signal);
   }
 
   public static resolve(): PromiseCancellable<void>;
-  public static resolve<T>(value: T | PromiseLike<T>): PromiseCancellable<Awaited<T>>;
-  public static resolve<T>(value?: T | PromiseLike<T>): PromiseCancellable<Awaited<T> | void> {
+  public static resolve<T>(
+    value: T | PromiseLike<T>,
+  ): PromiseCancellable<Awaited<T>>;
+  public static resolve<T>(
+    value?: T | PromiseLike<T>,
+  ): PromiseCancellable<Awaited<T> | void> {
     return PromiseCancellable.from(Promise.resolve(value));
   }
 
@@ -68,27 +71,43 @@ class PromiseCancellable<T> implements Promise<T> {
     }, options);
   }
 
-  public static all<T extends readonly unknown[] | []>(values: T): PromiseCancellable<{
+  public static all<T extends readonly unknown[] | []>(
+    values: T,
+  ): PromiseCancellable<{
     -readonly [P in keyof T]: Awaited<T[P]>;
   }>;
-  public static all<T>(values: Iterable<T | PromiseLike<T>>): PromiseCancellable<Awaited<T>[]>;
-  public static all<T>(values: Iterable<T | PromiseLike<T>>): PromiseCancellable<Awaited<T>[]> {
+  public static all<T>(
+    values: Iterable<T | PromiseLike<T>>,
+  ): PromiseCancellable<Awaited<T>[]>;
+  public static all<T>(
+    values: Iterable<T | PromiseLike<T>>,
+  ): PromiseCancellable<Awaited<T>[]> {
     return PromiseCancellable.from(Promise.all(values));
   }
 
-  public static allSettled<T extends readonly unknown[] | []>(values: T): PromiseCancellable<{
+  public static allSettled<T extends readonly unknown[] | []>(
+    values: T,
+  ): PromiseCancellable<{
     -readonly [P in keyof T]: PromiseSettledResult<Awaited<T[P]>>;
   }>;
-  public static allSettled<T>(values: Iterable<T | PromiseLike<T>>): PromiseCancellable<PromiseSettledResult<Awaited<T>>[]>;
-  public static allSettled<T>(values: Iterable<T | PromiseLike<T>>): PromiseCancellable<PromiseSettledResult<Awaited<T>>[]> {
+  public static allSettled<T>(
+    values: Iterable<T | PromiseLike<T>>,
+  ): PromiseCancellable<PromiseSettledResult<Awaited<T>>[]>;
+  public static allSettled<T>(
+    values: Iterable<T | PromiseLike<T>>,
+  ): PromiseCancellable<PromiseSettledResult<Awaited<T>>[]> {
     return PromiseCancellable.from(Promise.allSettled(values));
   }
 
-  public static race<T>(values: Iterable<T | PromiseLike<T>>): PromiseCancellable<Awaited<T>> {
+  public static race<T>(
+    values: Iterable<T | PromiseLike<T>>,
+  ): PromiseCancellable<Awaited<T>> {
     return PromiseCancellable.from(Promise.race(values));
   }
 
-  public static any<T>(values: Iterable<T | PromiseLike<T>>): PromiseCancellable<Awaited<T>> {
+  public static any<T>(
+    values: Iterable<T | PromiseLike<T>>,
+  ): PromiseCancellable<Awaited<T>> {
     return PromiseCancellable.from(Promise.any(values));
   }
 

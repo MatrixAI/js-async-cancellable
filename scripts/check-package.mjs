@@ -8,7 +8,10 @@ import { build } from 'esbuild';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'tmp/package-candidate');
 const consumer = path.join(output, 'consumer');
-const installed = path.join(consumer, 'node_modules/@matrixai/async-cancellable');
+const installed = path.join(
+  consumer,
+  'node_modules/@matrixai/async-cancellable',
+);
 const manifestText = await readFile(path.join(root, 'package.json'), 'utf8');
 const lock = JSON.parse(
   await readFile(path.join(root, 'package-lock.json'), 'utf8'),
@@ -136,7 +139,9 @@ if (process.argv.includes('--browser')) {
   });
   assert(
     Object.keys(bundled.metafile.inputs).some((name) =>
-      name.endsWith('node_modules/@matrixai/async-cancellable/dist/cancellation.js'),
+      name.endsWith(
+        'node_modules/@matrixai/async-cancellable/dist/cancellation.js',
+      ),
     ),
   );
   await writeFile(

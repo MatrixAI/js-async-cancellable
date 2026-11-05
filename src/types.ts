@@ -32,19 +32,22 @@ type CancellationExecution<T> = ContextCancellation & {
 
 type CancellationGroupMode = 'all' | 'allSettled' | 'race' | 'any';
 
-type CancellationGroupResult<M extends CancellationGroupMode, T> =
-  M extends 'all' ? T[] :
-  M extends 'allSettled' ? ContextScopeExit<T>[] : T;
+type CancellationGroupResult<
+  M extends CancellationGroupMode,
+  T,
+> = M extends 'all' ? T[] : M extends 'allSettled' ? ContextScopeExit<T>[] : T;
 
 type CancellationGroupOptions = CancellationOptions & {
   /** Only owned executions are eligible; never inferred from result selection. */
   readonly cancelRemaining?: 'never' | 'on-selection';
 };
 
-type CancellationGroup<M extends CancellationGroupMode, T> =
-  CancellationExecution<CancellationGroupResult<M, T>> & {
-    readonly outcomes: Promise<readonly ContextScopeExit<T>[]>;
-  };
+type CancellationGroup<
+  M extends CancellationGroupMode,
+  T,
+> = CancellationExecution<CancellationGroupResult<M, T>> & {
+  readonly outcomes: Promise<readonly ContextScopeExit<T>[]>;
+};
 
 type SharedCancellation<T> = CancellationExecution<T> & {
   readonly subscribe: (signal?: AbortSignal) => Promise<T>;

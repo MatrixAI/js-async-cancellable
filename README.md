@@ -13,8 +13,9 @@ npm publication or release of any downstream package.
 npm install --save 'git+ssh://git@github.com/MatrixAI/js-async-cancellable.git#v3.0.0'
 ```
 
-The self-contained [execution semantics](specs/0001-execution-ontology-and-semantics/adr.md)
-is proposed. Implementation, bounded verification, requirement satisfaction,
+The self-contained
+[execution semantics](specs/0001-execution-ontology-and-semantics/adr.md) is
+proposed. Implementation, bounded verification, requirement satisfaction,
 decision acceptance, and release approval remain separate.
 
 ## Vocabulary and ownership
@@ -39,18 +40,25 @@ only after its represented work and mandatory cleanup finish.
 `createCancellationScope()` is the reusable contexts provider. Each invocation
 owns a separate source and retains its links through the returned operation's
 actual completion. The body receives a new signal even when upstream is already
-aborted, so it can implement its own admission policy. Selecting `inherit: false`
-explicitly shields that propagation path; it does not clear upstream abortion.
+aborted, so it can implement its own admission policy. Selecting
+`inherit: false` explicitly shields that propagation path; it does not clear
+upstream abortion.
 
 ## Owned execution
 
 ```ts
-import { startCancellation, completeCancellation } from '@matrixai/async-cancellable';
+import {
+  startCancellation,
+  completeCancellation,
+} from '@matrixai/async-cancellable';
 
-const execution = startCancellation(async ({ signal, trace }) => {
-  signal.throwIfAborted();
-  return trace.length;
-}, { trace: 'request' });
+const execution = startCancellation(
+  async ({ signal, trace }) => {
+    signal.throwIfAborted();
+    return trace.length;
+  },
+  { trace: 'request' },
+);
 
 const value = await completeCancellation(execution);
 ```
@@ -78,21 +86,22 @@ factories whose executions it owns. It fully consumes and validates the iterable
 before acquiring any execution; bodies then start in native microtasks in input
 order. It does not accept promises as implicitly owned inputs.
 
-| Mode | Result | Completion |
-| --- | --- | --- |
-| `all` | All values in input order, or first observed failure. | Drains all owned inputs; additional failures are retained. |
-| `allSettled` | Every immutable fulfillment/rejection outcome in input order. | Drains all; candidate failures are explicit result data. |
-| `race` | First observed settlement. | Drains losers; unexpected loser failures remain owner-visible. |
-| `any` | First success, or input-ordered aggregate failure. | Drains all; failures observed before success are expected selection inputs, while later unexpected failures remain owner-visible. |
+| Mode         | Result                                                        | Completion                                                                                                                        |
+| ------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `all`        | All values in input order, or first observed failure.         | Drains all owned inputs; additional failures are retained.                                                                        |
+| `allSettled` | Every immutable fulfillment/rejection outcome in input order. | Drains all; candidate failures are explicit result data.                                                                          |
+| `race`       | First observed settlement.                                    | Drains losers; unexpected loser failures remain owner-visible.                                                                    |
+| `any`        | First success, or input-ordered aggregate failure.            | Drains all; failures observed before success are expected selection inputs, while later unexpected failures remain owner-visible. |
 
 The default `cancelRemaining: 'never'` lets remaining owned work continue, while
 still retaining its completion. Selecting `'on-selection'` requests cancellation
 of still-active inputs after result selection. It never declares those inputs
-finished. Internal selection cancellation is recognizable as an expected outcome;
-its exact value remains available in `outcomes`. All other secondary failures
-are retained in input order, without deduplicating identical rejection values.
-If both selection and secondary failures exist, completion preserves both using
-suppression. A late failure cannot retroactively change an already delivered result.
+finished. Internal selection cancellation is recognizable as an expected
+outcome; its exact value remains available in `outcomes`. All other secondary
+failures are retained in input order, without deduplicating identical rejection
+values. If both selection and secondary failures exist, completion preserves
+both using suppression. A late failure cannot retroactively change an already
+delivered result.
 
 Empty `all` and `allSettled` fulfill with empty arrays. Empty `any` rejects with
 an empty aggregate. Empty owning `race` rejects with a range error rather than
@@ -106,11 +115,12 @@ shielding policy, compose an explicitly owned scope rather than clear a signal.
 
 `startSharedCancellation` owns one source execution. Subscribers receive only
 their own waits. The default `whenIdle: 'continue'` retains the source when a
-subscriber leaves. With `'cancel'`, final departure closes subscription admission
-and requests cancellation; later subscriptions are rejected, without restarting
-the source. The owner still retains completion if the source ignores cancellation.
-Subscriber admission and departure transitions are synchronous within this
-JavaScript execution agent. No cross-agent shared-memory membership is promised.
+subscriber leaves. With `'cancel'`, final departure closes subscription
+admission and requests cancellation; later subscriptions are rejected, without
+restarting the source. The owner still retains completion if the source ignores
+cancellation. Subscriber admission and departure transitions are synchronous
+within this JavaScript execution agent. No cross-agent shared-memory membership
+is promised.
 
 All-source/quorum signal policies, cross-agent supervision, and automatic
 ownership transfer to a detached region are not implemented by this API.
@@ -129,17 +139,17 @@ subclass. Chain methods return ordinary promises and callbacks receive ordinary
 native arguments. Static result combinators borrow their inputs and do not
 cancel them.
 
-| Previous mechanism | Explicit replacement |
-| --- | --- |
-| Inject a controller to select implicit cancellation behavior | Use source ownership and explicit facade options or an owned execution. |
-| Forward cancellation through chained signal callbacks | Use owned operation factories and a sequence, or an explicitly linked scope. |
-| Cancel a result aggregate and manually cancel its members | Use an owning execution group with declared remaining-work policy. |
-| Early rejection used as completion | Retain the execution completion handle and required cleanup. |
-| Forward a shared waiter's cancellation to the source | Use subscriber-local waiting and an explicit source-owner idle policy. |
-| Rewrite cancellation-shaped errors to undefined | Preserve arbitrary reasons; no-reason cancellation uses the native default. |
+| Previous mechanism                                           | Explicit replacement                                                         |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Inject a controller to select implicit cancellation behavior | Use source ownership and explicit facade options or an owned execution.      |
+| Forward cancellation through chained signal callbacks        | Use owned operation factories and a sequence, or an explicitly linked scope. |
+| Cancel a result aggregate and manually cancel its members    | Use an owning execution group with declared remaining-work policy.           |
+| Early rejection used as completion                           | Retain the execution completion handle and required cleanup.                 |
+| Forward a shared waiter's cancellation to the source         | Use subscriber-local waiting and an explicit source-owner idle policy.       |
+| Rewrite cancellation-shaped errors to undefined              | Preserve arbitrary reasons; no-reason cancellation uses the native default.  |
 
-Existing lock/timer consumers need deliberate migration; ordinary native chaining
-is not a replacement for their cancellation and ownership semantics.
+Existing lock/timer consumers need deliberate migration; ordinary native
+chaining is not a replacement for their cancellation and ownership semantics.
 
 ## Development and package production
 

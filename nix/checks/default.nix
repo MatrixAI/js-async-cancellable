@@ -1,4 +1,11 @@
-{ pkgs, nodejs, lint, system, gitignore, npmDependencies }:
+{
+  pkgs,
+  nodejs,
+  lint,
+  system,
+  gitignore,
+  npmDependencies,
+}:
 let
   src = gitignore.gitignoreSource ../..;
   verify = pkgs.buildNpmPackage {
@@ -26,9 +33,12 @@ let
   lintCheck = lint.mkCheck {
     inherit src;
     name = "async-cancellable-lint";
-    npmDependencies = npmDependencies // { inherit nodejs; };
+    npmDependencies = npmDependencies // {
+      inherit nodejs;
+    };
   };
-in {
+in
+{
   inherit verify;
   lint = lintCheck;
   default = pkgs.runCommand "async-cancellable-check-default" { } ''

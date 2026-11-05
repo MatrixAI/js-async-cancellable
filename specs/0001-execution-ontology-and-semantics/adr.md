@@ -1,6 +1,8 @@
 ---
 title: Execution ontology and composition semantics
-description: Self-contained vocabulary and rules separating result selection, cancellation propagation, ownership, admission, timing, and actual completion.
+description:
+  Self-contained vocabulary and rules separating result selection, cancellation
+  propagation, ownership, admission, timing, and actual completion.
 type: adr
 category: architecture
 tags: [execution, ontology, cancellation, composition, ownership, completion]
@@ -29,8 +31,8 @@ these semantics before their APIs are finalized.
 
 Cancellation and timing APIs participate in sequential, concurrent, racing, and
 shared-work compositions. A tree-shaped parent/child explanation describes some
-links but does not describe the whole execution model. A shorter API can silently
-lose necessary behavior if it collapses cancellation forwarding, result
+links but does not describe the whole execution model. A shorter API can
+silently lose necessary behavior if it collapses cancellation forwarding, result
 selection, and completion into ordinary promise settlement.
 
 This record contains its own definitions, normative clauses, policy vocabulary,
@@ -43,7 +45,8 @@ separately below the shared text.
 
 ### Primary Decision Drivers
 
-- Preserve useful asynchronous composition without accidental ownership transfer.
+- Preserve useful asynchronous composition without accidental ownership
+  transfer.
 - Make cancellation, waiting, work settlement, and cleanup distinguishable.
 - Keep specialized providers authoritative for their own invariants.
 
@@ -51,7 +54,8 @@ separately below the shared text.
 
 - Prefer ordinary native-async interfaces without requiring a universal runtime.
 - Make semantic copies independently readable and their drift reviewable.
-- State conditional laws and executable counterexamples rather than global claims.
+- State conditional laws and executable counterexamples rather than global
+  claims.
 
 ## Considered Options
 
@@ -98,30 +102,30 @@ Every requirement in this shared section has requirement status target and
 evidence status unevidenced until repository-local evidence is reviewed. These
 definitions specify behavior, not mandatory classes, fields, or runtime objects.
 
-| Term | Meaning |
-| --- | --- |
-| Capability | An available operation or facility, with its provider's validity and authority conditions. |
-| Requirement | A structural description of capabilities an operation needs. |
-| Operation | A deferred context-dependent computation; construction alone does not invoke it. |
-| Execution | One invocation of an operation, including the work it represents; not necessarily a separately scheduled task. |
-| Operator | A reusable transformation of operations, possibly changing input requirements or selected results. |
-| Context | Explicit execution input containing capabilities and data; references alone establish neither ownership nor admission. |
-| Context derivation | Explicit inheritance, replacement, narrowing, or intentional omission of execution input. |
-| Scope | A boundary retaining its declared obligations through represented work and mandatory cleanup. |
-| Owner | The participant responsible for a declared resource's release or an execution's completion obligations. |
-| Borrower | A participant allowed to use a facility without thereby acquiring release or cancellation authority. |
-| Cancellation source | State together with authority to request cancellation of its designated execution or group. |
-| Cancellation signal | Observation of a cancellation request and its reason, not authority to cancel the source. |
-| Cancellation link | An explicitly selected directed propagation rule between cancellation sources/signals. |
-| Upstream / downstream | Direction relative to a named propagation link, not a universal ancestry relation. |
-| Waiter | An observer of a result whose waiting lifetime may end independently of the underlying execution. |
-| Result settlement | Availability of the fulfillment or rejection selected for a particular result observer. |
-| Work settlement | Fulfillment or rejection of the underlying work represented at the named boundary. |
-| Actual completion | Work settlement plus completion of all mandatory cleanup and owned-completion obligations at that boundary. |
-| Admission | Provider-validated permission to enter an operation on a lifecycle participant. |
-| Completion lease | Provider-owned accounting that retains protection for admitted represented work until its required completion boundary. |
-| Deadline constraint | An absolute bound in an identified clock domain, distinct from a scheduler or owned timer. |
-| Supervision | Explicit authority and policy for starting, observing, requesting cancellation of, and retaining completion of designated executions. |
+| Term                  | Meaning                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Capability            | An available operation or facility, with its provider's validity and authority conditions.                                            |
+| Requirement           | A structural description of capabilities an operation needs.                                                                          |
+| Operation             | A deferred context-dependent computation; construction alone does not invoke it.                                                      |
+| Execution             | One invocation of an operation, including the work it represents; not necessarily a separately scheduled task.                        |
+| Operator              | A reusable transformation of operations, possibly changing input requirements or selected results.                                    |
+| Context               | Explicit execution input containing capabilities and data; references alone establish neither ownership nor admission.                |
+| Context derivation    | Explicit inheritance, replacement, narrowing, or intentional omission of execution input.                                             |
+| Scope                 | A boundary retaining its declared obligations through represented work and mandatory cleanup.                                         |
+| Owner                 | The participant responsible for a declared resource's release or an execution's completion obligations.                               |
+| Borrower              | A participant allowed to use a facility without thereby acquiring release or cancellation authority.                                  |
+| Cancellation source   | State together with authority to request cancellation of its designated execution or group.                                           |
+| Cancellation signal   | Observation of a cancellation request and its reason, not authority to cancel the source.                                             |
+| Cancellation link     | An explicitly selected directed propagation rule between cancellation sources/signals.                                                |
+| Upstream / downstream | Direction relative to a named propagation link, not a universal ancestry relation.                                                    |
+| Waiter                | An observer of a result whose waiting lifetime may end independently of the underlying execution.                                     |
+| Result settlement     | Availability of the fulfillment or rejection selected for a particular result observer.                                               |
+| Work settlement       | Fulfillment or rejection of the underlying work represented at the named boundary.                                                    |
+| Actual completion     | Work settlement plus completion of all mandatory cleanup and owned-completion obligations at that boundary.                           |
+| Admission             | Provider-validated permission to enter an operation on a lifecycle participant.                                                       |
+| Completion lease      | Provider-owned accounting that retains protection for admitted represented work until its required completion boundary.               |
+| Deadline constraint   | An absolute bound in an identified clock domain, distinct from a scheduler or owned timer.                                            |
+| Supervision           | Explicit authority and policy for starting, observing, requesting cancellation of, and retaining completion of designated executions. |
 
 Parent and child MAY describe a specifically named nesting or propagation
 relationship. They MUST NOT stand alone as names for result dependencies,
@@ -137,22 +141,24 @@ uses the same objects to represent several of them:
 
 - Result dependencies: which outcomes determine a selected result.
 - Cancellation propagation: which requests reach which designated executions.
-- Ownership and borrowing: who may cancel, retain, release, or transfer a resource.
+- Ownership and borrowing: who may cancel, retain, release, or transfer a
+  resource.
 - Completion obligations: which represented executions and cleanup must finish.
 - Admission: which participant authorizes and protects each admitted call.
 - Context derivation: which capabilities and constraints an invocation receives.
 
 These relationships need not form the same graph. Scope nesting does not prove
 that shared-work or cancellation relationships form a tree. Cycles and repeated
-links require an explicit reentrancy/termination policy, not recursive
-unbounded forwarding or an assumption that every graph is acyclic.
+links require an explicit reentrancy/termination policy, not recursive unbounded
+forwarding or an assumption that every graph is acyclic.
 
 Observable events include invocation, admission, request issuance, signal
-observation, result selection, result settlement, work settlement, cleanup start,
-cleanup finish, release, and actual completion. Their order is a partial order:
-unrelated concurrent events have no claimed global order. A selected result may
-settle before owned losers complete; an owner must still retain those completion
-obligations. Resource use may not occur after its valid release boundary.
+observation, result selection, result settlement, work settlement, cleanup
+start, cleanup finish, release, and actual completion. Their order is a partial
+order: unrelated concurrent events have no claimed global order. A selected
+result may settle before owned losers complete; an owner must still retain those
+completion obligations. Resource use may not occur after its valid release
+boundary.
 
 <a id="REQ-EXEC-RELATIONS-001"></a>
 
@@ -161,9 +167,9 @@ obligations. Resource use may not occur after its valid release boundary.
 Level: MUST. Requirement status: target. Evidence status: unevidenced.
 
 A composition MUST NOT infer cancellation authority, release ownership,
-admission, or completion from observing a result, containing a context reference,
-sharing a signal, or participating in a result combinator. An explicit contract
-must establish each authority or obligation separately.
+admission, or completion from observing a result, containing a context
+reference, sharing a signal, or participating in a result combinator. An
+explicit contract must establish each authority or obligation separately.
 
 <a id="REQ-EXEC-COMPLETION-001"></a>
 
@@ -228,8 +234,9 @@ An API combining cancellation inputs MUST declare its selection rule, handling
 of already-aborted inputs, tie ordering, output reason, duplicate links, and
 cleanup ownership. Any-source forwarding, all-source/quorum policies, fan-out,
 and shielding are different policies, not synonyms. Shielding MUST explicitly
-omit or defer a named propagation path; it MUST NOT imply that an already-aborted
-signal became un-aborted or that every mandatory cleanup can be cancelled.
+omit or defer a named propagation path; it MUST NOT imply that an
+already-aborted signal became un-aborted or that every mandatory cleanup can be
+cancelled.
 
 <a id="REQ-EXEC-WAITING-001"></a>
 
@@ -242,7 +249,8 @@ requests cancellation under explicit authority. Borrowed work MUST NOT be
 cancelled, released, or reported completed solely because one waiter leaves.
 Abandoned paths MUST continue to handle eventual represented rejections and
 retain mandatory cleanup; they MUST NOT silently convert execution failure into
-success. The owner-facing completion channel and failure policy must be explicit.
+success. The owner-facing completion channel and failure policy must be
+explicit.
 
 ### Composition policy vocabulary
 
@@ -253,18 +261,18 @@ The vocabulary does not require every provider to implement every policy.
 Unsupported policies must be explicit; evidence covers the policies actually
 offered, not imaginary any/all/quorum or supervision implementations.
 
-| Composition | Result selection | Cancellation and completion decisions |
-| --- | --- | --- |
-| Sequence | Later stage depends on earlier selected outcome. | Forward to the active stage under declared authority; handle requests during stage transitions; do not start forbidden later work after cancellation. |
-| All results | All fulfillments, or a selected failure under declared fail-fast/collect policy. | Declare whether failure signals owned siblings; retain all owned work and cleanup regardless of early selected failure. |
-| All outcomes | One fulfillment/rejection outcome per participating result. | A failed candidate does not itself imply sibling cancellation; external cancellation is a separate policy. |
-| First settlement | First observed fulfillment or rejection under declared tie ordering. | Declare whether losers continue, receive requests, or are transferred; winner selection does not complete losers. |
-| First success | First observed fulfillment; aggregate failure if no candidate succeeds. | An earlier candidate failure does not imply cancelling viable candidates; declare post-success loser policy and failure ordering. |
-| Cancellation fan-in | A declared rule combines several request inputs. | Declare any/all/quorum selection and reason arbitration; do not confuse request aggregation with result aggregation. |
-| Cancellation fan-out | One request reaches several designated sources. | Retain independent state and authority; one recipient cannot automatically cancel siblings. |
-| Shared execution | Several subscribers observe one execution. | A subscriber can abandon its wait without cancelling shared work; source cancellation requires owner policy, such as explicit last-subscriber handling. |
-| Retry | A declared policy selects successive attempts and their final outcome. | Distinguish retained versus fresh resources and total versus per-attempt budget; old attempts must not escape their owner. |
-| Shielded region | Result follows the region's declared work. | State which incoming requests are omitted/deferred, how requests resume, and which owner retains completion. |
+| Composition          | Result selection                                                                 | Cancellation and completion decisions                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sequence             | Later stage depends on earlier selected outcome.                                 | Forward to the active stage under declared authority; handle requests during stage transitions; do not start forbidden later work after cancellation.   |
+| All results          | All fulfillments, or a selected failure under declared fail-fast/collect policy. | Declare whether failure signals owned siblings; retain all owned work and cleanup regardless of early selected failure.                                 |
+| All outcomes         | One fulfillment/rejection outcome per participating result.                      | A failed candidate does not itself imply sibling cancellation; external cancellation is a separate policy.                                              |
+| First settlement     | First observed fulfillment or rejection under declared tie ordering.             | Declare whether losers continue, receive requests, or are transferred; winner selection does not complete losers.                                       |
+| First success        | First observed fulfillment; aggregate failure if no candidate succeeds.          | An earlier candidate failure does not imply cancelling viable candidates; declare post-success loser policy and failure ordering.                       |
+| Cancellation fan-in  | A declared rule combines several request inputs.                                 | Declare any/all/quorum selection and reason arbitration; do not confuse request aggregation with result aggregation.                                    |
+| Cancellation fan-out | One request reaches several designated sources.                                  | Retain independent state and authority; one recipient cannot automatically cancel siblings.                                                             |
+| Shared execution     | Several subscribers observe one execution.                                       | A subscriber can abandon its wait without cancelling shared work; source cancellation requires owner policy, such as explicit last-subscriber handling. |
+| Retry                | A declared policy selects successive attempts and their final outcome.           | Distinguish retained versus fresh resources and total versus per-attempt budget; old attempts must not escape their owner.                              |
+| Shielded region      | Result follows the region's declared work.                                       | State which incoming requests are omitted/deferred, how requests resume, and which owner retains completion.                                            |
 
 <a id="REQ-EXEC-COMBINATORS-001"></a>
 
@@ -304,7 +312,8 @@ ordering and identity preservation for aggregate failures and simultaneous
 primary/cleanup failures. A result already delivered to a waiter need not be
 replaced by a later loser failure; however, that failure MUST remain observable
 through the documented owner-facing completion or failure channel. Identical
-values MUST NOT be used to deduplicate distinct failures without an explicit rule.
+values MUST NOT be used to deduplicate distinct failures without an explicit
+rule.
 
 <a id="REQ-EXEC-TIMING-001"></a>
 
@@ -317,9 +326,10 @@ Intersection within one compatible clock domain MUST choose the minimum bound;
 incompatible domains require rejection or an explicit conversion contract.
 Relative budgets MUST state when they become absolute. Retry placement MUST
 distinguish total and per-attempt budgets, and neither may widen an inherited
-bound. Expired constraints MUST NOT restart with fresh time. Scheduling ownership,
-reset/refresh semantics, borrowed timers, and handler completion require separate
-contracts; timer cancellation is not proof that a running handler finished.
+bound. Expired constraints MUST NOT restart with fresh time. Scheduling
+ownership, reset/refresh semantics, borrowed timers, and handler completion
+require separate contracts; timer cancellation is not proof that a running
+handler finished.
 
 <a id="REQ-EXEC-ADMISSION-001"></a>
 
@@ -346,7 +356,8 @@ MUST retain their scheduling, locking, lifecycle, transaction, and release
 invariants. Applications select supported composition policies through reusable
 provider mechanisms rather than reimplementing private machinery. Structural
 compatibility and runtime package dependency direction are separate from
-specification replication; neither requires cross-repository specification access.
+specification replication; neither requires cross-repository specification
+access.
 
 <a id="REQ-EXEC-LAWS-001"></a>
 
@@ -391,36 +402,36 @@ Level: MUST. Requirement status: target. Evidence status: unevidenced.
 A repository adopting this semantic edition MUST retain the full shared
 definitions and clauses locally, with matching shared identifiers and edition.
 Its record MUST NOT import normative meaning from another specification through
-a link, include, sibling path, or instruction to consult it. Provider obligations
-and evidence are local additions and MUST NOT silently weaken shared clauses.
-Shared semantic text for one edition MUST remain equivalent across replicas;
-material revisions require a new edition and explicit local adoption decisions.
-Acceptance, evidence, and releases remain independent per repository. Neither
-local validation nor package installation may require sibling checkouts to read
-or validate the adopted record.
+a link, include, sibling path, or instruction to consult it. Provider
+obligations and evidence are local additions and MUST NOT silently weaken shared
+clauses. Shared semantic text for one edition MUST remain equivalent across
+replicas; material revisions require a new edition and explicit local adoption
+decisions. Acceptance, evidence, and releases remain independent per repository.
+Neither local validation nor package installation may require sibling checkouts
+to read or validate the adopted record.
 
 ### Planned execution cases
 
 All cases below are planned obligations, not execution receipts. Each applicable
 case needs a deterministic trace, outcome assertions, and cleanup observations.
 
-| Case | Required observation |
-| --- | --- |
-| CASE-EXEC-DIRECTION | Pre-aborted and later upstream requests preserve exact reason; downstream requests cannot abort upstream or unrelated recipients. |
-| CASE-EXEC-FANIN | Multiple live/pre-aborted inputs, duplicate links, competing reasons, and each offered any/all/quorum policy follow declared arbitration. |
-| CASE-EXEC-SHIELD | A named upstream path is omitted/deferred while required cleanup remains owned and any resumed propagation is explicit. |
-| CASE-EXEC-WAITER | One waiter abandons; represented work continues, receives later required requests, and retains failure observation through completion. |
-| CASE-EXEC-SEQUENCE | A request during stage handoff reaches the designated active stage or prevents later startup under the declared policy. |
-| CASE-EXEC-ALL | Selected early failure, optional sibling requests, and all owned cleanup are distinct events. |
-| CASE-EXEC-OUTCOMES | One candidate failure does not imply sibling cancellation; outcome order and external request policy are explicit. |
-| CASE-EXEC-RACE | Winner settles before a gated loser finishes; loser cancellation policy and retained completion are independently asserted. |
-| CASE-EXEC-SUCCESS | Early failure leaves viable candidates; success selects once; all-failed ordering and owned-loser completion remain explicit. |
-| CASE-EXEC-PARTIAL | Startup/iteration/listener setup failure after partial acquisition unwinds only owned state and preserves primary/cleanup failures. |
-| CASE-EXEC-SUBSCRIBERS | One subscriber leaves while another still needs shared work; final departure races with new admission under explicit owner policy. |
-| CASE-EXEC-TIME | Same-clock minimum laws, mismatched domains, expired constraints, total/per-attempt budgets, and borrowed scheduling are distinguished. |
-| CASE-EXEC-ADMISSION | Abandoned waits and projected contexts cannot release admission protection; shutdown requests precede waits when required for progress. |
-| CASE-EXEC-FAILURES | Arbitrary reasons, concurrent failures, late loser failure, and asynchronous cleanup failure retain identity and declared ordering. |
-| CASE-EXEC-NONCOOPERATIVE | A requested but non-cooperative execution remains incomplete; any bounded test uses explicit gates, not a false stop guarantee. |
+| Case                     | Required observation                                                                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| CASE-EXEC-DIRECTION      | Pre-aborted and later upstream requests preserve exact reason; downstream requests cannot abort upstream or unrelated recipients.         |
+| CASE-EXEC-FANIN          | Multiple live/pre-aborted inputs, duplicate links, competing reasons, and each offered any/all/quorum policy follow declared arbitration. |
+| CASE-EXEC-SHIELD         | A named upstream path is omitted/deferred while required cleanup remains owned and any resumed propagation is explicit.                   |
+| CASE-EXEC-WAITER         | One waiter abandons; represented work continues, receives later required requests, and retains failure observation through completion.    |
+| CASE-EXEC-SEQUENCE       | A request during stage handoff reaches the designated active stage or prevents later startup under the declared policy.                   |
+| CASE-EXEC-ALL            | Selected early failure, optional sibling requests, and all owned cleanup are distinct events.                                             |
+| CASE-EXEC-OUTCOMES       | One candidate failure does not imply sibling cancellation; outcome order and external request policy are explicit.                        |
+| CASE-EXEC-RACE           | Winner settles before a gated loser finishes; loser cancellation policy and retained completion are independently asserted.               |
+| CASE-EXEC-SUCCESS        | Early failure leaves viable candidates; success selects once; all-failed ordering and owned-loser completion remain explicit.             |
+| CASE-EXEC-PARTIAL        | Startup/iteration/listener setup failure after partial acquisition unwinds only owned state and preserves primary/cleanup failures.       |
+| CASE-EXEC-SUBSCRIBERS    | One subscriber leaves while another still needs shared work; final departure races with new admission under explicit owner policy.        |
+| CASE-EXEC-TIME           | Same-clock minimum laws, mismatched domains, expired constraints, total/per-attempt budgets, and borrowed scheduling are distinguished.   |
+| CASE-EXEC-ADMISSION      | Abandoned waits and projected contexts cannot release admission protection; shutdown requests precede waits when required for progress.   |
+| CASE-EXEC-FAILURES       | Arbitrary reasons, concurrent failures, late loser failure, and asynchronous cleanup failure retain identity and declared ordering.       |
+| CASE-EXEC-NONCOOPERATIVE | A requested but non-cooperative execution remains incomplete; any bounded test uses explicit gates, not a false stop guarantee.           |
 
 <!-- shared-execution-semantics: execution-semantics-1 end -->
 
@@ -460,11 +471,11 @@ implemented merely because they occur in the shared vocabulary.
 Level: MUST. Requirement status: target. Evidence status: unevidenced.
 
 The redesigned provider MUST support explicit composition of sequential stages,
-all-results, all-outcomes, first-settlement, and first-success executions without
-requiring applications to reconstruct private cancellation machinery. Owned
-execution inputs and borrowed result inputs MUST be distinguishable in the API
-or its explicit options. Owning inputs may be deferred operation factories or
-explicitly transferred handles; passing an arbitrary promise alone does not
+all-results, all-outcomes, first-settlement, and first-success executions
+without requiring applications to reconstruct private cancellation machinery.
+Owned execution inputs and borrowed result inputs MUST be distinguishable in the
+API or its explicit options. Owning inputs may be deferred operation factories
+or explicitly transferred handles; passing an arbitrary promise alone does not
 transfer ownership. Public names and representation remain implementation-review
 decisions, not a requirement for a universal task carrier.
 
@@ -489,8 +500,9 @@ stage and how a request between stages prevents or reaches later startup. A
 cancelled waiter MUST NOT be treated as proof that the active stage completed.
 Recovery handlers may select a new result or start another explicitly owned
 execution, but MUST NOT reset an already-aborted source or silently lose an
-outstanding request. If a recovery region shields or replaces a propagation path,
-its authority, duration, resumed propagation, and completion owner must be explicit.
+outstanding request. If a recovery region shields or replaces a propagation
+path, its authority, duration, resumed propagation, and completion owner must be
+explicit.
 
 <a id="REQ-ASYNC-CANCEL-SHARED-001"></a>
 
@@ -524,14 +536,14 @@ publication authority remain separate gates.
 
 These cases extend the shared inventory; none is a passing execution receipt.
 
-| Case | Local obligation |
-| --- | --- |
-| CASE-ASYNC-CANCEL-TOPOLOGY | Direct forwarding, no forwarding, fan-out, and each offered fan-in policy preserve direction, reason, and listener lifetime. |
+| Case                          | Local obligation                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| CASE-ASYNC-CANCEL-TOPOLOGY    | Direct forwarding, no forwarding, fan-out, and each offered fan-in policy preserve direction, reason, and listener lifetime.                   |
 | CASE-ASYNC-CANCEL-COMBINATORS | All five required execution compositions separate result selection from requests and completion, including empty and partially started inputs. |
-| CASE-ASYNC-CANCEL-HANDOFF | Requests before, during, and after an active-stage transition follow the declared forwarding/startup policy. |
-| CASE-ASYNC-CANCEL-RECOVERY | Recovery changes a selected result without implicitly clearing an established source request or dropping ownership. |
-| CASE-ASYNC-CANCEL-SHARING | Subscriber departure cannot cancel another subscriber's work; any offered last-subscriber policy handles concurrent admission. |
-| CASE-ASYNC-CANCEL-MIGRATION | Representative real consumers retain useful cancellation and completion behavior under strict packed-package and runtime checks. |
+| CASE-ASYNC-CANCEL-HANDOFF     | Requests before, during, and after an active-stage transition follow the declared forwarding/startup policy.                                   |
+| CASE-ASYNC-CANCEL-RECOVERY    | Recovery changes a selected result without implicitly clearing an established source request or dropping ownership.                            |
+| CASE-ASYNC-CANCEL-SHARING     | Subscriber departure cannot cancel another subscriber's work; any offered last-subscriber policy handles concurrent admission.                 |
+| CASE-ASYNC-CANCEL-MIGRATION   | Representative real consumers retain useful cancellation and completion behavior under strict packed-package and runtime checks.               |
 
 ## Consequences
 
@@ -571,8 +583,8 @@ cases and open evidence gaps. It defines no additional normative requirements.
 
 ## More Information
 
-Shared editions coordinate vocabulary and behavior, not package version pins.
-A package can adopt the same edition while implementing different explicitly
+Shared editions coordinate vocabulary and behavior, not package version pins. A
+package can adopt the same edition while implementing different explicitly
 selected policies. Such differences require documentation and evidence; textual
 edition equality alone is not a compatibility proof.
 
@@ -584,10 +596,10 @@ edition equality alone is not a compatibility proof.
 
 **Findings:**
 
-| Finding | Files | Lines | Assessment |
-| --- | --- | --- | --- |
-| Self-contained execution semantics proposed | This record | Shared semantic section | Runtime cases are planned, not evidenced |
-| Provider boundaries retained | This record | Repository adoption profile | No universal engine or automatic API migration adopted |
+| Finding                                     | Files       | Lines                       | Assessment                                             |
+| ------------------------------------------- | ----------- | --------------------------- | ------------------------------------------------------ |
+| Self-contained execution semantics proposed | This record | Shared semantic section     | Runtime cases are planned, not evidenced               |
+| Provider boundaries retained                | This record | Repository adoption profile | No universal engine or automatic API migration adopted |
 
 **Summary:** Defines an explicit semantic review boundary before finalizing
 cancellation and timing provider rewrites. Replica validation and runtime

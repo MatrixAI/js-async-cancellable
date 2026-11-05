@@ -11,8 +11,11 @@ function waitForPromise<T>(
   return new Promise<Awaited<T>>((resolve, reject) => {
     let pending = true;
     // Clear caller continuations after abandonment even if source never ends.
-    let observer: { resolve: typeof resolve; reject: typeof reject } | undefined =
-      { resolve, reject };
+    let observer:
+      { resolve: typeof resolve; reject: typeof reject } | undefined = {
+      resolve,
+      reject,
+    };
     const finish = (fulfilled: boolean, result: unknown) => {
       if (!pending) return;
       pending = false;
@@ -21,7 +24,9 @@ function waitForPromise<T>(
       try {
         signal.removeEventListener('abort', abort);
       } catch (cleanup) {
-        current.reject(fulfilled ? cleanup : new SuppressedError(cleanup, result));
+        current.reject(
+          fulfilled ? cleanup : new SuppressedError(cleanup, result),
+        );
         return;
       }
       if (fulfilled) current.resolve(result as Awaited<T>);
@@ -34,8 +39,9 @@ function waitForPromise<T>(
       (reason) => finish(false, reason),
     );
     try {
-      if (signal.aborted) abort();
-      else {
+      if (signal.aborted) {
+        abort();
+      } else {
         signal.addEventListener('abort', abort, { once: true });
         if (signal.aborted) abort();
       }

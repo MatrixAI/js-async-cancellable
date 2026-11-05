@@ -260,7 +260,10 @@ async function install(root) {
       fs.rmSync(backup, { recursive: true });
     } catch (error) {
       for (const file of files) {
-        fs.copyFileSync(path.join(root, file), path.join(backup, `${file}.attempt`));
+        fs.copyFileSync(
+          path.join(root, file),
+          path.join(backup, `${file}.attempt`),
+        );
       }
       files.forEach((file, index) =>
         fs.writeFileSync(path.join(root, file), originals[index]),

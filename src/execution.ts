@@ -1,4 +1,8 @@
-import type { ContextCancellation, ContextOperation, ContextScopeExit } from '@matrixai/contexts';
+import type {
+  ContextCancellation,
+  ContextOperation,
+  ContextScopeExit,
+} from '@matrixai/contexts';
 import type {
   CancellationExecution,
   CancellationGroup,
@@ -38,13 +42,17 @@ function startCancellation<C extends object, T>(
 }
 
 /** A completion-safe boundary: a selected early result cannot escape its owner. */
-async function completeCancellation<T>(execution: CancellationExecution<T>): Promise<T> {
+async function completeCancellation<T>(
+  execution: CancellationExecution<T>,
+): Promise<T> {
   const outcome = await execution.completion;
   if (outcome.status === 'rejected') throw outcome.reason;
   return outcome.value;
 }
 
-function observeCompletion<T>(promise: Promise<T>): Promise<ContextScopeExit<T>> {
+function observeCompletion<T>(
+  promise: Promise<T>,
+): Promise<ContextScopeExit<T>> {
   return promise.then(
     (value) => Object.freeze({ status: 'fulfilled' as const, value }),
     (reason: unknown) => Object.freeze({ status: 'rejected' as const, reason }),
@@ -55,7 +63,11 @@ function observeCompletion<T>(promise: Promise<T>): Promise<ContextScopeExit<T>>
  * Inputs are factories owned by this invocation, not borrowed promise values.
  * Result selection may be early; completion always drains every started input.
  */
-function startCancellationGroup<C extends object, T, M extends CancellationGroupMode>(
+function startCancellationGroup<
+  C extends object,
+  T,
+  M extends CancellationGroupMode,
+>(
   mode: M,
   operations: Iterable<ContextOperation<C & ContextCancellation, T>>,
   context: C & Partial<ContextCancellation>,
@@ -83,7 +95,10 @@ function startCancellationGroup<C extends object, T, M extends CancellationGroup
   });
   let selected = false;
   let completed = 0;
-  const select = (outcome: ContextScopeExit<unknown>, indices: readonly number[]) => {
+  const select = (
+    outcome: ContextScopeExit<unknown>,
+    indices: readonly number[],
+  ) => {
     if (selected) return;
     selected = true;
     for (const index of indices) contributors.add(index);
@@ -96,27 +111,52 @@ function startCancellationGroup<C extends object, T, M extends CancellationGroup
     if (mode === 'race') select(outcome, [index]);
     if (mode === 'any' && outcome.status === 'fulfilled') {
       // Earlier candidate failures are expected inputs to first-success selection.
-      select(outcome, observed.flatMap((entry, i) =>
-        entry?.status === 'rejected' ? [i] : []).concat(index));
+      select(
+        outcome,
+        observed
+          .flatMap((entry, i) => (entry?.status === 'rejected' ? [i] : []))
+          .concat(index),
+      );
     }
-    if (mode === 'all' && outcome.status === 'rejected') select(outcome, [index]);
+    if (mode === 'all' && outcome.status === 'rejected') {
+      select(outcome, [index]);
+    }
     if (completed !== factories.length || selected) return;
     const indices = observed.map((_outcome, i) => i);
     if (mode === 'all') {
-      select({ status: 'fulfilled', value: observed.map((entry) =>
-        (entry as { status: 'fulfilled'; value: T }).value) }, indices);
+      select(
+        {
+          status: 'fulfilled',
+          value: observed.map(
+            (entry) => (entry as { status: 'fulfilled'; value: T }).value,
+          ),
+        },
+        indices,
+      );
     } else if (mode === 'allSettled') {
       select({ status: 'fulfilled', value: [...observed] }, indices);
     } else if (mode === 'any') {
-      select({ status: 'rejected', reason: new AggregateError(
-        observed.map((entry) => (entry as { status: 'rejected'; reason: unknown }).reason),
-        'No execution fulfilled',
-      ) }, indices);
+      select(
+        {
+          status: 'rejected',
+          reason: new AggregateError(
+            observed.map(
+              (entry) =>
+                (entry as { status: 'rejected'; reason: unknown }).reason,
+            ),
+            'No execution fulfilled',
+          ),
+        },
+        indices,
+      );
     }
   };
   try {
     for (const operation of factories) {
-      const execution = startCancellation(operation, { ...context, signal: owned.signal });
+      const execution = startCancellation(operation, {
+        ...context,
+        signal: owned.signal,
+      });
       const index = executions.length;
       executions.push(execution);
       void execution.completion.then((outcome) => record(outcome, index));
@@ -125,9 +165,18 @@ function startCancellationGroup<C extends object, T, M extends CancellationGroup
       if (mode === 'all' || mode === 'allSettled') {
         select({ status: 'fulfilled', value: [] }, []);
       } else {
-        select({ status: 'rejected', reason: mode === 'any'
-          ? new AggregateError([], 'No execution fulfilled')
-          : new RangeError('An owning race requires at least one execution') }, []);
+        select(
+          {
+            status: 'rejected',
+            reason:
+              mode === 'any'
+                ? new AggregateError([], 'No execution fulfilled')
+                : new RangeError(
+                    'An owning race requires at least one execution',
+                  ),
+          },
+          [],
+        );
       }
     }
   } catch (reason) {
@@ -135,8 +184,9 @@ function startCancellationGroup<C extends object, T, M extends CancellationGroup
     owned.cancel(stopReason);
     select({ status: 'rejected', reason }, []);
   }
-  const outcomes = Promise.all(executions.map((execution) => execution.completion))
-    .then((entries) => Object.freeze(entries));
+  const outcomes = Promise.all(
+    executions.map((execution) => execution.completion),
+  ).then((entries) => Object.freeze(entries));
   const result = selection.then((outcome) => {
     if (outcome.status === 'rejected') throw outcome.reason;
     return outcome.value as CancellationGroupResult<M, T>;
@@ -150,15 +200,25 @@ function startCancellationGroup<C extends object, T, M extends CancellationGroup
       const outcome = await selection;
       const secondary: unknown[] = [];
       entries.forEach((entry, index) => {
-        if (!contributors.has(index) && entry.status === 'rejected' && entry.reason !== stopReason) {
+        if (
+          !contributors.has(index) &&
+          entry.status === 'rejected' &&
+          entry.reason !== stopReason
+        ) {
           secondary.push(entry.reason);
         }
       });
       if (secondary.length > 0) {
-        const failure = secondary.length === 1 ? secondary[0]
-          : new AggregateError(secondary, 'Additional owned execution failures');
+        const failure =
+          secondary.length === 1
+            ? secondary[0]
+            : new AggregateError(
+                secondary,
+                'Additional owned execution failures',
+              );
         throw outcome.status === 'rejected'
-          ? new SuppressedError(failure, outcome.reason) : failure;
+          ? new SuppressedError(failure, outcome.reason)
+          : failure;
       }
       if (outcome.status === 'rejected') throw outcome.reason;
       return outcome.value as CancellationGroupResult<M, T>;
@@ -182,14 +242,18 @@ function startCancellationSequence<C extends object, T>(
   options?: CancellationOptions,
 ): CancellationExecution<T[]> {
   const factories = Array.from(operations);
-  return startCancellation(async (inner) => {
-    const values: T[] = [];
-    for (const operation of factories) {
-      inner.signal.throwIfAborted();
-      values.push(await operation(inner));
-    }
-    return values;
-  }, context, options);
+  return startCancellation(
+    async (inner) => {
+      const values: T[] = [];
+      for (const operation of factories) {
+        inner.signal.throwIfAborted();
+        values.push(await operation(inner));
+      }
+      return values;
+    },
+    context,
+    options,
+  );
 }
 
 /**
@@ -199,7 +263,9 @@ function startCancellationSequence<C extends object, T>(
 function startSharedCancellation<C extends object, T>(
   operation: ContextOperation<C & ContextCancellation, T>,
   context: C & Partial<ContextCancellation>,
-  options: CancellationOptions & { readonly whenIdle?: 'continue' | 'cancel' } = {},
+  options: CancellationOptions & {
+    readonly whenIdle?: 'continue' | 'cancel';
+  } = {},
 ): SharedCancellation<T> {
   const whenIdle = options.whenIdle ?? 'continue';
   if (whenIdle !== 'continue' && whenIdle !== 'cancel') {
