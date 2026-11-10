@@ -6,9 +6,9 @@ description:
 type: adr
 category: architecture
 tags: [execution, ontology, cancellation, composition, ownership, completion]
-status: proposed
+status: deprecated
 created: 2026-11-03
-updated: 2026-11-03
+updated: 2026-11-10
 author: Matrix AI
 project: js-async-cancellable
 technologies: [TypeScript, JavaScript, Node.js]
@@ -19,11 +19,12 @@ audience: [developers, maintainers]
 
 ## Status
 
-Proposed. Shared semantic edition: execution-semantics-1. Requirements are
-targets; runtime conformance is unevidenced by this record. Authoring or
-replicating this proposal does not accept it, change a published contract, or
-authorize a release. Existing implementation experiments require review against
-these semantics before their APIs are finalized.
+Withdrawn without being accepted. The shared edition, its replication rules,
+candidate requirements, and planned cases are historical and are not binding. No
+single successor replaces this record. The current local decisions are
+[cancellation and waiting](../0002-cancellation-and-waiting/adr.md) and
+[owned execution](../0003-owned-execution/adr.md). They select their own scope
+and do not adopt the withdrawn edition by implication.
 
 ## Context
 
@@ -88,6 +89,9 @@ of replicated semantic editions.
 **Risk Assessment:** Bounded if completion and authority remain explicit.
 
 ## Decision
+
+The following is the historical proposal, not an accepted decision or a current
+source of obligations.
 
 Propose option 3. The following shared semantic section is complete in this
 record. Its edition identifies meaning, not an npm version, runtime protocol
@@ -608,3 +612,23 @@ conformance are separate work.
 **Action Required:** Validate the record and replicas, review local adoption,
 inventory actual graph compositions, and attach revision-attributed evidence
 before claiming requirement satisfaction or accepting the decision.
+
+### 2026-11-10
+
+**Status:** Partial
+
+**Findings:**
+
+| Finding                      | Files                                                                                                | Lines               | Assessment                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------ |
+| Shared edition not adopted   | This record                                                                                          | Status and Decision | Withdrawn locally; no binding replication requirement        |
+| Provider contracts separated | [Cancellation](../0002-cancellation-and-waiting/adr.md), [execution](../0003-owned-execution/adr.md) | Decisions           | Local decisions select provider-owned behavior independently |
+| Historical evidence retained | [Conformance mapping](conformance.yml)                                                               | Verification        | Dirty candidate receipt is not evidence for a later revision |
+
+**Summary:** The contexts project withdrew its corresponding ontology proposal.
+This repository independently retains the useful cancellation and execution
+decisions without presenting an ecosystem-wide semantic edition as accepted. The
+historical requirements and evidence are not automatically transferred.
+
+**Action Required:** Maintain and verify each accepted local obligation against
+the applicable implementation and release revision.

@@ -1,0 +1,123 @@
+version: 1
+scope: Active requirement-to-case bindings; test execution and decision acceptance are separate.
+binding:
+  runner: Vitest through the provider test command
+  command: npm test
+  mapping: These cases provide bounded evidence and do not imply complete coverage.
+cases:
+  - id: CASE-CANCEL-DYNAMIC
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: A long-lived owner changes upstream relationships across operations.
+  - id: CASE-CANCEL-DUPLICATE
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: Two independently detached attachments share one listener.
+  - id: CASE-CANCEL-RETRY
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+    limit: One failed physical detach is retried successfully.
+  - id: CASE-CANCEL-CLOSE-RETRY
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-003
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+    limit: A failed close retries one link without repeating successful cleanup.
+  - id: CASE-CANCEL-PARTIAL-SETUP
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+    limit: A second input fails after installation and the earlier link is removed.
+  - id: CASE-CANCEL-ATTACH-PREABORT
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: One already-aborted signal attached dynamically.
+  - id: CASE-CANCEL-ATTACH-CLOSED
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+      - adr.md#REQ-CANCEL-CONTROLLER-003
+    limit: A closed controller refuses new links while retaining local abort.
+  - id: CASE-CANCEL-ATTACH-ABORTED-OWNER
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: An already-aborted open owner returns an inert detach without installing a listener.
+  - id: CASE-CANCEL-ATTACH-REENTRANT
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: Closing while a structural signal installs a listener.
+  - id: CASE-CANCEL-ATTACH-NESTED
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: A nested attachment is rejected while a failing installation is in progress.
+  - id: CASE-CANCEL-SETUP-RETRY
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: Failed installation and cleanup are followed by a successful new attachment.
+  - id: CASE-CANCEL-UNLINK-REENTRANT
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: Closing during physical listener removal.
+  - id: CASE-CANCEL-UNLINK-REENTRANT-FAILURE
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-003
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: A reentrant close observes an incomplete removal that later fails and is retried.
+  - id: CASE-CANCEL-NATIVE
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-001
+    limit: Native controller identity, signal composition, and explicit promise sharing.
+  - id: CASE-CANCEL-DIRECTION
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-002
+    limit: Public owner, two siblings, and one upstream signal.
+  - id: CASE-CANCEL-PREABORT
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-002
+    limit: Scope entry with one already-aborted upstream.
+  - id: CASE-CANCEL-CLOSED
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-003
+    limit: Logical closure after one failed physical listener removal.
+  - id: CASE-CANCEL-SETUP
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+    limit: One upstream setup and unwind failure.
+  - id: CASE-CANCEL-UNLINK
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+      - adr.md#REQ-CANCEL-CONTROLLER-005
+    limit: Two peer removal failures on a multi-input owner.
+  - id: CASE-CANCEL-FAILURE-ROLES
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+    limit: Body failure and two synchronous internal unlink failures.
+  - id: CASE-CANCEL-FANIN
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-005
+    limit: Duplicate inputs, first observed request, and pre-aborted order.
+  - id: CASE-PROMISE-LATE-SHARED
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-001
+    limit: Shared native controller after promise settlement.

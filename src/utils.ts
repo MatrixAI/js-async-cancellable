@@ -1,5 +1,37 @@
+import type { ContextCancellation, ContextScope } from '@matrixai/contexts';
+import type { CancellationOptions } from './types.js';
+import { bracketResource, createContextScope } from '@matrixai/contexts';
+import CancellationController from './CancellationController.js';
+
 /**
- * Cancel only this wait. The input is borrowed: it is neither cancelled nor
+ * Create a reusable contexts scope that supplies an independently owned signal.
+ * Each invocation acquires a controller and retains its upstream link through
+ * represented body work and mandatory cleanup, then closes the link. Detached
+ * work is outside this boundary, and an abandoned wait does not close it early.
+ *
+ * An upstream signal is inherited by default; `inherit: false` shields that
+ * path. A pre-aborted upstream reaches the body as an aborted child signal
+ * rather than skipping body entry. If body and unlink both fail, the bracket
+ * preserves both failures with cleanup as the primary SuppressedError value.
+ */
+function createCancellationScope({
+  inherit = true,
+}: CancellationOptions = {}): ContextScope<
+  Partial<ContextCancellation>,
+  ContextCancellation
+> {
+  return createContextScope<Partial<ContextCancellation>, ContextCancellation>(
+    async (outer, body) =>
+      bracketResource(
+        () => new CancellationController(inherit ? outer.signal : undefined),
+        ({ signal }) => body({ signal }),
+        (owned) => owned.close(),
+      ),
+  );
+}
+
+/**
+ * Cancel only this wait. The borrowed input is neither cancelled nor
  * joined. Its eventual rejection remains observed after wait abandonment.
  */
 function waitForPromise<T>(
@@ -51,4 +83,4 @@ function waitForPromise<T>(
   });
 }
 
-export { waitForPromise };
+export { createCancellationScope, waitForPromise };

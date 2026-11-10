@@ -18,8 +18,8 @@ execFileSync(
 execFileSync(
   process.execPath,
   [
-    '--experimental-vm-modules',
-    path.join(root, 'node_modules/jest/bin/jest.js'),
+    path.join(root, 'node_modules/vitest/vitest.mjs'),
+    'run',
     ...process.argv.slice(2),
   ],
   options,

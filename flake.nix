@@ -84,13 +84,6 @@
                   null;
             };
           };
-          browserEnvironment = {
-            CHECK_PLAYWRIGHT_VERSION = pkgs.playwright-driver.version;
-            PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
-            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-            PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-            FONTCONFIG_FILE = pkgs.makeFontsConf { fontDirectories = [ pkgs.dejavu_fonts ]; };
-          };
         in
         {
           packages = {
@@ -127,11 +120,11 @@
               nodejs
               (pkgs.lib.hiPrio npm)
               lint
+              pkgs.gnutar
+              pkgs.structured-madr
             ];
-            env = browserEnvironment;
             enterShell = ''
               export PATH="${lint}/bin:${npm}/bin:$PWD/dist/bin:$PWD/node_modules/.bin:$PATH"
-              npm install --no-audit --fund=false --prefer-offline || return "$?"
             '';
           };
         };

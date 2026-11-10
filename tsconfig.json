@@ -17,7 +17,7 @@
     "module": "NodeNext",
     "target": "ES2022",
     "lib": ["ES2022", "ESNext.Disposable"],
-    "types": ["node", "jest", "jest-extended"],
+    "types": ["node"],
     "verbatimModuleSyntax": true,
     "paths": {
       "#*": ["./src/*"]
@@ -32,6 +32,5 @@
     "./scripts/**/*",
     "./*.mjs",
     "./benches/**/*"
-  ],
-  "exclude": ["./tests/fixtures/package/types.ts"]
+  ]
 }

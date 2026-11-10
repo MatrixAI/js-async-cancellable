@@ -1,4 +1,4 @@
-import type { ContextCancellation, ContextScopeExit } from '@matrixai/contexts';
+import type { ContextCancellation } from '@matrixai/contexts';
 
 interface PromiseLikeCancellable<T> extends PromiseLike<T> {
   cancel(reason?: unknown): void;
@@ -6,15 +6,25 @@ interface PromiseLikeCancellable<T> extends PromiseLike<T> {
 
 /** Owned authority for one child, never for its borrowed parent. */
 type Cancellation = ContextCancellation & {
-  readonly cancel: (reason?: unknown) => void;
+  readonly abort: (reason?: unknown) => void;
   /** End ownership after represented completion; does not signal abortion. */
   readonly close: () => void;
 };
 
+type CancellationLink = {
+  readonly signal: AbortSignal;
+  readonly propagate: () => void;
+  references: number;
+  active: boolean;
+  installing: boolean;
+  removing: boolean;
+};
+
 type PromiseCancellableOptions = {
-  readonly signal?: AbortSignal;
-  /** Default: reject this wait. Request mode waits for executor settlement. */
-  readonly cancellation?: 'reject' | 'request';
+  /** Early waiting abandons the input; request-only waits for its outcome. */
+  readonly policy: 'early' | 'request-only';
+  /** Supplying a controller intentionally shares cancellation authority. */
+  readonly controller?: AbortController;
 };
 
 type CancellationOptions = {
@@ -22,46 +32,10 @@ type CancellationOptions = {
   readonly inherit?: boolean;
 };
 
-/** The result may settle early; completion always retains owned represented work. */
-type CancellationExecution<T> = ContextCancellation & {
-  readonly result: Promise<T>;
-  readonly completion: Promise<ContextScopeExit<T>>;
-  readonly cancel: (reason?: unknown) => void;
-  readonly wait: (signal?: AbortSignal) => Promise<T>;
-};
-
-type CancellationGroupMode = 'all' | 'allSettled' | 'race' | 'any';
-
-type CancellationGroupResult<
-  M extends CancellationGroupMode,
-  T,
-> = M extends 'all' ? T[] : M extends 'allSettled' ? ContextScopeExit<T>[] : T;
-
-type CancellationGroupOptions = CancellationOptions & {
-  /** Only owned executions are eligible; never inferred from result selection. */
-  readonly cancelRemaining?: 'never' | 'on-selection';
-};
-
-type CancellationGroup<
-  M extends CancellationGroupMode,
-  T,
-> = CancellationExecution<CancellationGroupResult<M, T>> & {
-  readonly outcomes: Promise<readonly ContextScopeExit<T>[]>;
-};
-
-type SharedCancellation<T> = CancellationExecution<T> & {
-  readonly subscribe: (signal?: AbortSignal) => Promise<T>;
-};
-
 export type {
   Cancellation,
+  CancellationLink,
   CancellationOptions,
-  CancellationExecution,
-  CancellationGroupMode,
-  CancellationGroupResult,
-  CancellationGroupOptions,
-  CancellationGroup,
-  SharedCancellation,
   PromiseLikeCancellable,
   PromiseCancellableOptions,
 };

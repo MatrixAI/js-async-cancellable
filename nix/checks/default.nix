@@ -23,10 +23,8 @@ let
     installPhase = ''
       mkdir -p "$out/artifacts"
       cp -R tmp/junit "$out/artifacts/junit"
-      cp -R tmp/package-candidate "$out/artifacts/package"
-      cp tmp/portable-imports.json "$out/artifacts/portable-imports.json"
       cat > "$out/report.json" <<EOF
-      {"schemaVersion":1,"name":"verify","kind":"conformance","status":"passed","system":"${system}","artifacts":{"junit":"artifacts/junit","package":"artifacts/package/report.json","portableImports":"artifacts/portable-imports.json"}}
+      {"schemaVersion":1,"name":"verify","kind":"conformance","status":"passed","system":"${system}","summary":"Node 24 typechecking, tests, and build passed","artifacts":{"junit":"artifacts/junit"}}
       EOF
     '';
   };

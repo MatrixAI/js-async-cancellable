@@ -1,22 +1,20 @@
 # js-async-cancellable
 
-Cancellation providers and explicit asynchronous execution composition.
+Cancellation-aware promises and a reusable cancellation provider.
 
-## Version 3 compatibility
+## Compatibility and status
 
-Version 3 is a breaking redesign against released contexts v3.0.0. Consumers of
-the version 2 controller/chaining contract must migrate deliberately; changing
-their dependency alone is not sufficient. Git-only distribution does not imply
-npm publication or release of any downstream package.
+The current unreleased version 4 candidate consumes the contexts v4.0.0 Git
+producer. A dependency upgrade is not a substitute for consumer migration and
+verification. The version change records the provider dependency boundary, not a
+release or publication authorization.
 
-```sh
-npm install --save 'git+ssh://git@github.com/MatrixAI/js-async-cancellable.git#v3.0.0'
-```
-
-The self-contained
-[execution semantics](specs/0001-execution-ontology-and-semantics/adr.md) is
-proposed. Implementation, bounded verification, requirement satisfaction,
-decision acceptance, and release approval remain separate.
+Version 3 was a breaking redesign against contexts v3.0.0. Consumers of the
+version 2 controller/chaining contract must migrate deliberately. The current
+[specification index](specs/README.md) distinguishes accepted local decisions
+from the withdrawn historical execution-ontology proposal. Decision acceptance,
+implementation evidence, requirement satisfaction, and release approval remain
+separate.
 
 ## Vocabulary and ownership
 
@@ -30,12 +28,21 @@ abortion reaches that source with the exact reason; local cancellation does not
 abort upstream or another independently owned source. Parent/child is only
 shorthand for this named cancellation relationship, not a universal task tree.
 
-`createCancellation(upstream)` returns an owned handle with `signal`, `cancel`,
-and `close`. An array of upstream signals selects any-source fan-in: the first
-observed request wins; already-aborted inputs are selected in input order.
-Duplicate inputs install one link. Closing unlinks idempotently, does not abort
-anything, and disables new requests through that handle. The caller must close
-only after its represented work and mandatory cleanup finish.
+A native `AbortController` supplies authority to request cancellation; its
+signal alone does not. Passing a controller to a promise shares that exact
+controller and signal, including the ability to abort it after the promise
+settles.
+
+`CancellationController` extends the native controller and owns directional
+links from upstream signals. Its `link(signal)` returns a detach function, so a
+long-lived object can manage each relationship across multiple operations.
+Duplicate attachments share one physical listener and detach independently.
+`close()` disables forwarding and releases all links without aborting the local
+signal. Failed removal is observable and may be retried; neither abortion nor
+close proves that represented work or cleanup has finished. While an owner is
+open and not already aborted, reentrant attachment to a signal during listener
+installation or removal is rejected. A close encountered during removal reports
+that incomplete cleanup.
 
 `createCancellationScope()` is the reusable contexts provider. Each invocation
 owns a separate source and retains its links through the returned operation's
@@ -44,112 +51,59 @@ aborted, so it can implement its own admission policy. Selecting
 `inherit: false` explicitly shields that propagation path; it does not clear
 upstream abortion.
 
-## Owned execution
+## Promise waiting and migration
 
-```ts
-import {
-  startCancellation,
-  completeCancellation,
-} from '@matrixai/async-cancellable';
-
-const execution = startCancellation(
-  async ({ signal, trace }) => {
-    signal.throwIfAborted();
-    return trace.length;
-  },
-  { trace: 'request' },
-);
-
-const value = await completeCancellation(execution);
-```
-
-`startCancellation` begins the body in a native microtask, skips body entry if
-its effective signal is already aborted, and retains links through represented
-body completion. Its handle exposes:
-
-- `result`: The selected result promise.
-- `completion`: An always-fulfilled, immutable fulfillment/rejection outcome
-  recording owned completion, including mandatory represented cleanup.
-- `signal` and `cancel(reason)`: Local cancellation observation and authority.
-- `wait(waitingSignal)`: A separately cancellable wait, without cancelling work.
-
-`completeCancellation(handle)` waits for actual completion and unwraps its
-outcome. An owner must retain this boundary even after an early result or an
-abandoned wait. Cancellation is cooperative: non-cooperative represented work
-can keep completion pending indefinitely. Detached work not returned or awaited
-by the operation is not magically supervised or joined.
-
-## Execution compositions
-
-`startCancellationGroup(mode, operations, context, options)` accepts operation
-factories whose executions it owns. It fully consumes and validates the iterable
-before acquiring any execution; bodies then start in native microtasks in input
-order. It does not accept promises as implicitly owned inputs.
-
-| Mode         | Result                                                        | Completion                                                                                                                        |
-| ------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `all`        | All values in input order, or first observed failure.         | Drains all owned inputs; additional failures are retained.                                                                        |
-| `allSettled` | Every immutable fulfillment/rejection outcome in input order. | Drains all; candidate failures are explicit result data.                                                                          |
-| `race`       | First observed settlement.                                    | Drains losers; unexpected loser failures remain owner-visible.                                                                    |
-| `any`        | First success, or input-ordered aggregate failure.            | Drains all; failures observed before success are expected selection inputs, while later unexpected failures remain owner-visible. |
-
-The default `cancelRemaining: 'never'` lets remaining owned work continue, while
-still retaining its completion. Selecting `'on-selection'` requests cancellation
-of still-active inputs after result selection. It never declares those inputs
-finished. Internal selection cancellation is recognizable as an expected
-outcome; its exact value remains available in `outcomes`. All other secondary
-failures are retained in input order, without deduplicating identical rejection
-values. If both selection and secondary failures exist, completion preserves
-both using suppression. A late failure cannot retroactively change an already
-delivered result.
-
-Empty `all` and `allSettled` fulfill with empty arrays. Empty `any` rejects with
-an empty aggregate. Empty owning `race` rejects with a range error rather than
-holding an empty region open forever. Borrowed native promise combinators keep
-their native empty-input behavior.
-
-`startCancellationSequence` retains one effective signal across stage handoff,
-checks it before each stage, and returns the values in stage order. A request
-during a handoff prevents later startup. To select a different recovery or
-shielding policy, compose an explicitly owned scope rather than clear a signal.
-
-`startSharedCancellation` owns one source execution. Subscribers receive only
-their own waits. The default `whenIdle: 'continue'` retains the source when a
-subscriber leaves. With `'cancel'`, final departure closes subscription
-admission and requests cancellation; later subscriptions are rejected, without
-restarting the source. The owner still retains completion if the source ignores
-cancellation. Subscriber admission and departure transitions are synchronous
-within this JavaScript execution agent. No cross-agent shared-memory membership
-is promised.
-
-All-source/quorum signal policies, cross-agent supervision, and automatic
-ownership transfer to a detached region are not implemented by this API.
-
-## Borrowed promises and migration
-
-`waitForPromise(value, signal)` allows only wait abandonment. It does not call a
-borrowed value's cancellation method or release it. It continues observing an
-eventual rejection after the waiter leaves.
-
-`PromiseCancellable` remains a cancellable-wait facade, not an execution engine.
-Its explicit `cancellation` option is `'reject'` by default, or `'request'` to
-retain executor-represented settlement after a request. Registering a listener
-does not change that policy. It is promise-compatible, not a native Promise
-subclass. Chain methods return ordinary promises and callbacks receive ordinary
-native arguments. Static result combinators borrow their inputs and do not
+`PromiseCancellable` is a native promise subclass, not an execution engine.
+Direct construction makes cancellation a cooperative request; it cannot override
+a native resolving function that has already committed to a value or thenable.
+Registering a signal listener does not select a waiting policy. Chain callbacks
+receive the chain result's signal, with independent controllers by default.
+Continuations return the base cancellable promise rather than preserving a
+consumer subclass. Static result combinators borrow their inputs and do not
 cancel them.
 
-| Previous mechanism                                           | Explicit replacement                                                         |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| Inject a controller to select implicit cancellation behavior | Use source ownership and explicit facade options or an owned execution.      |
-| Forward cancellation through chained signal callbacks        | Use owned operation factories and a sequence, or an explicitly linked scope. |
-| Cancel a result aggregate and manually cancel its members    | Use an owning execution group with declared remaining-work policy.           |
-| Early rejection used as completion                           | Retain the execution completion handle and required cleanup.                 |
-| Forward a shared waiter's cancellation to the source         | Use subscriber-local waiting and an explicit source-owner idle policy.       |
-| Rewrite cancellation-shaped errors to undefined              | Preserve arbitrary reasons; no-reason cancellation uses the native default.  |
+`PromiseCancellable.from(work, { policy: 'early' })` creates an early waiting
+boundary. Cancelling it can reject the wait while borrowed work continues. Use
+`{ policy: 'request-only' }` to wait for the input outcome despite a request.
+The owner must retain a separate completion-bearing result if early waiting
+could otherwise hide work or cleanup. The accepted waiting and completion
+decision does not establish downstream integration or authorize release.
 
-Existing lock/timer consumers need deliberate migration; ordinary native
-chaining is not a replacement for their cancellation and ownership semantics.
+The provider does not supply the earlier owned-execution, group, sequence, or
+shared-subscription APIs. Native result combinators select results but do not
+replace those APIs' ownership, cancellation, or completion policies.
+
+| Previous mechanism                                           | Explicit replacement                                                        |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Inject a controller to select implicit cancellation behavior | Select waiting explicitly; a supplied native controller shares authority.   |
+| Forward cancellation through chained signal callbacks        | Pass a selected signal explicitly; independent chains do not auto-link.     |
+| Cancel a result aggregate and manually cancel its members    | Define ownership and cancellation in the application or its provider.       |
+| Early rejection used as completion                           | Retain and await the actual work and mandatory cleanup separately.          |
+| Forward a shared waiter's cancellation to the source         | Define a source-owner policy rather than inferring it from a borrowed wait. |
+| Rewrite cancellation-shaped errors to undefined              | Preserve arbitrary reasons; no-reason cancellation uses the native default. |
+
+Existing lock and timer consumers need deliberate migration. The timer's prior
+eager/lazy options and custom-controller bypass require explicit review and
+consumer evidence; the candidate does not establish their replacement yet.
+
+## Iteration and provider boundaries
+
+Wrapping a generator's creation in a cancellation scope does not keep its signal
+linked while a caller later advances the generator. Keep consumption inside the
+scope, or explicitly own the cancellation source through the generator's
+terminal completion and cleanup. A suspended generator that is abandoned may
+retain ownership indefinitely; cleanup that yields can require further explicit
+advancement. Borrowing an iterator does not acquire its cancellation authority.
+
+Contexts supplies the generic function and method adapters. Applications select
+their transformation and ordering; cancellation does not grant lifecycle
+admission, schedule a timer, or prove a timer handler has finished. Ambient
+transport and inspection are optional and are not required by this provider. The
+scope projects ordinary enumerable data records only. It cannot accept an
+already-admitted lifecycle context with non-enumerable metadata. Apply
+projection before admission, or use a provider-selected exact transformation
+with a valid lifecycle policy; do not copy hidden admission authority. Real
+lifecycle-provider integration remains unverified.
 
 ## Development and package production
 
@@ -175,7 +129,8 @@ metadata, and direct runtime-provider descriptors. It does not bundle runtime
 dependencies or rewrite its packed manifest to local/store coordinates.
 
 The integrated development environment and independent Nix checks share package
-scripts, not mutable state. Activation does not load credentials or change shell
-options. Lint is supplied by the selected package set; it remains paused for the
-current implementation batch. Historical generated API documentation is not the
-candidate contract and is excluded from the package.
+scripts, not mutable state. Activation does not install dependencies, load
+credentials, or change shell options. Lint is supplied by the selected package
+set; use `matrixai-lint --fix` for development or `matrixai-lint --check` for
+verification. Historical generated API documentation is not the candidate
+contract and is excluded from the package.
