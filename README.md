@@ -4,12 +4,12 @@ Cancellation-aware promises and a reusable cancellation provider.
 
 ## Compatibility and status
 
-The current unreleased version 4 candidate consumes the contexts v4.0.0 Git
-producer. It also breaks version 3 APIs and behavior: the owned-execution
-helpers and public waiting helper are removed, and promise construction,
-waiting, and continuation semantics have changed. A dependency upgrade is not a
-substitute for consumer migration and verification. This version is not a
-release or publication authorization.
+Version 4 consumes the contexts v4.0.0 Git producer. It breaks version 3 APIs
+and behavior: the owned-execution helpers and public waiting helper are removed,
+and promise construction, waiting, and continuation semantics have changed. A
+dependency upgrade is not a substitute for consumer migration and verification.
+This version is not a release or publication authorization for subsequent
+changes. The named facade additions below are unreleased.
 
 Version 3 was a breaking redesign against contexts v3.0.0. Consumers of the
 version 2 controller/chaining contract must migrate deliberately. The current
@@ -52,6 +52,38 @@ actual completion. The body receives a new signal even when upstream is already
 aborted, so it can implement its own admission policy. Selecting
 `inherit: false` explicitly shields that propagation path; it does not clear
 upstream abortion.
+
+### Named cancellation authoring forms
+
+The unreleased function and standard method forms select a required ordinary
+context argument explicitly. Each invocation links a local cancellation source
+to the borrowed parent signal and retains work and cleanup until completion:
+
+```ts
+import { cancellable } from '@matrixai/async-cancellable/functions';
+import { cancellable as cancellableMethod } from '@matrixai/async-cancellable/decorators';
+
+type Context = { trace: string; signal?: AbortSignal };
+const read = cancellable(async (context: Context) => context.trace, {
+  context: 0,
+});
+const result = read({ trace: 'request' });
+result.cancel('requested');
+await result;
+
+class Service {
+  @cancellableMethod({ context: 0 })
+  async read(context: Context): Promise<string> {
+    return context.trace;
+  }
+}
+```
+
+A request does not itself settle the returned promise or abort the parent. A
+decorated method keeps its declared TypeScript return type even though the
+runtime result is cancellable. The adapter preserves the original call signature
+and does not subtract supplied requirements. It accepts finite required argument
+tuples, not optional selected arguments or rest positions.
 
 ## Promise waiting and migration
 

@@ -19,6 +19,12 @@ evidence status must be read separately. Contexts supplies structural protocols
 and generic resource ownership; this provider owns its cancellation policies and
 application code chooses composition.
 
+## Proposed decisions
+
+- [Cancellation function and method facades](0007-cancellation-facades/adr.md)
+  proposes named provider-owned authoring forms and their cancellation and
+  completion boundaries. It is not yet an accepted or implemented contract.
+
 ## Historical decisions
 
 - [Owned execution](0003-owned-execution/adr.md) was superseded by ADR-0006. Its

@@ -19,6 +19,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./functions": {
+      "types": "./dist/functions/index.d.ts",
+      "import": "./dist/functions/index.js"
+    },
+    "./decorators": {
+      "types": "./dist/decorators/index.d.ts",
+      "import": "./dist/decorators/index.js"
     }
   },
   "imports": {
@@ -34,7 +42,7 @@
     "lintfix": "matrixai-lint --fix",
     "typecheck": "tsc -p ./tsconfig.json",
     "check:portable": "node --experimental-import-meta-resolve ./scripts/check-portable.mjs",
-    "check:conformance": "npm run typecheck && npm test -- --no-file-parallelism && npm run build",
+    "check:conformance": "npm run build && npm run typecheck && npm test -- --no-file-parallelism",
     "check": "npm run check:conformance && npm run lint"
   },
   "dependencies": {
