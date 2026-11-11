@@ -5,8 +5,10 @@ Cancellation-aware promises and a reusable cancellation provider.
 ## Compatibility and status
 
 The current unreleased version 4 candidate consumes the contexts v4.0.0 Git
-producer. A dependency upgrade is not a substitute for consumer migration and
-verification. The version change records the provider dependency boundary, not a
+producer. It also breaks version 3 APIs and behavior: the owned-execution
+helpers and public waiting helper are removed, and promise construction,
+waiting, and continuation semantics have changed. A dependency upgrade is not a
+substitute for consumer migration and verification. This version is not a
 release or publication authorization.
 
 Version 3 was a breaking redesign against contexts v3.0.0. Consumers of the

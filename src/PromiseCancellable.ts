@@ -63,6 +63,8 @@ class PromiseCancellable<T> extends Promise<T> {
    * remains observed, but is not delivered as a separate completion outcome.
    * Owners needing that outcome must retain the original work or another
    * completion-bearing result. A supplied controller shares its exact authority.
+   * A listener setup failure takes precedence over a reentrant request during
+   * setup; a simultaneous removal failure preserves both failure values.
    */
   public static from<T>(
     value: T | PromiseLike<T>,
@@ -141,7 +143,8 @@ class PromiseCancellable<T> extends Promise<T> {
    * Callbacks receive its signal; a request alone does not skip them or cancel
    * the parent. Supplying a controller shares that authority with the result.
    * Continuations return the base cancellable promise; this method does not
-   * preserve the identity of a subclass of this class.
+   * preserve the identity of a subclass of this class. Callback results use the
+   * returned promise's native resolution, including self-resolution rejection.
    */
   public then<TResult1 = T, TResult2 = never>(
     onFulfilled?:
@@ -152,17 +155,42 @@ class PromiseCancellable<T> extends Promise<T> {
       | null,
     controller: AbortController = new AbortController(),
   ): PromiseCancellable<TResult1 | TResult2> {
-    const next = super.then(
-      typeof onFulfilled === 'function'
-        ? (value) => onFulfilled(value, controller.signal)
-        : undefined,
-      typeof onRejected === 'function'
-        ? (reason) => onRejected(reason, controller.signal)
-        : undefined,
+    let resolveChild!: (
+      value: TResult1 | TResult2 | PromiseLike<TResult1 | TResult2>,
+    ) => void;
+    let rejectChild!: (reason?: unknown) => void;
+    const child = new PromiseCancellable<TResult1 | TResult2>(
+      (resolve, reject) => {
+        resolveChild = resolve;
+        rejectChild = reject;
+      },
+      controller,
     );
-    return new PromiseCancellable<TResult1 | TResult2>((resolve, reject) => {
-      void next.then(resolve, reject);
-    }, controller);
+    void super.then(
+      (value) => {
+        if (typeof onFulfilled !== 'function') {
+          resolveChild(value as unknown as TResult1);
+          return;
+        }
+        try {
+          resolveChild(onFulfilled(value, controller.signal));
+        } catch (reason) {
+          rejectChild(reason);
+        }
+      },
+      (reason) => {
+        if (typeof onRejected !== 'function') {
+          rejectChild(reason);
+          return;
+        }
+        try {
+          resolveChild(onRejected(reason, controller.signal));
+        } catch (failure) {
+          rejectChild(failure);
+        }
+      },
+    );
+    return child;
   }
 
   /** Create a rejection continuation with the same authority policy as `then`. */

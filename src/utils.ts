@@ -33,6 +33,8 @@ function createCancellationScope({
 /**
  * Cancel only this wait. The borrowed input is neither cancelled nor
  * joined. Its eventual rejection remains observed after wait abandonment.
+ * Complete listener installation before settling; a setup failure takes
+ * precedence over a reentrant request, with any removal failure preserved.
  */
 function waitForPromise<T>(
   value: T | PromiseLike<T>,
@@ -42,6 +44,9 @@ function waitForPromise<T>(
   if (signal == null) return source;
   return new Promise<Awaited<T>>((resolve, reject) => {
     let pending = true;
+    let installing = false;
+    let registrationAttempted = false;
+    let deferredOutcome: { fulfilled: boolean; result: unknown } | undefined;
     // Clear caller continuations after abandonment even if source never ends.
     let observer:
       { resolve: typeof resolve; reject: typeof reject } | undefined = {
@@ -50,16 +55,23 @@ function waitForPromise<T>(
     };
     const finish = (fulfilled: boolean, result: unknown) => {
       if (!pending) return;
+      if (installing) {
+        deferredOutcome ??= { fulfilled, result };
+        return;
+      }
       pending = false;
+      deferredOutcome = undefined;
       const current = observer!;
       observer = undefined;
-      try {
-        signal.removeEventListener('abort', abort);
-      } catch (cleanup) {
-        current.reject(
-          fulfilled ? cleanup : new SuppressedError(cleanup, result),
-        );
-        return;
+      if (registrationAttempted) {
+        try {
+          signal.removeEventListener('abort', abort);
+        } catch (cleanup) {
+          current.reject(
+            fulfilled ? cleanup : new SuppressedError(cleanup, result),
+          );
+          return;
+        }
       }
       if (fulfilled) current.resolve(result as Awaited<T>);
       else current.reject(result);
@@ -72,13 +84,24 @@ function waitForPromise<T>(
       (result) => finish(true, result),
       (reason) => finish(false, reason),
     );
+    if (!pending) return;
     try {
       if (signal.aborted) {
         abort();
       } else {
         // Synthetic abort events must not consume the listener for a real abort.
-        signal.addEventListener('abort', abort);
-        if (signal.aborted) abort();
+        registrationAttempted = true;
+        installing = true;
+        try {
+          signal.addEventListener('abort', abort);
+        } finally {
+          installing = false;
+        }
+        if (deferredOutcome != null) {
+          finish(deferredOutcome.fulfilled, deferredOutcome.result);
+        } else if (signal.aborted) {
+          abort();
+        }
       }
     } catch (reason) {
       finish(false, reason);

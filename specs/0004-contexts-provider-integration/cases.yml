@@ -15,6 +15,11 @@ cases:
     requirements:
       - adr.md#REQ-CANCEL-CONTEXT-ORDER-001
     limit: One body failure and one unlink failure.
+  - id: CASE-CONTEXT-WAIT-REENTRANT-SETUP
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-ORDER-001
+    limit: A reentrant waiter setup failure remains visible while the scope releases its link.
   - id: CASE-CONTEXT-GENERATOR
     test: ../../tests/contexts.test.ts
     requirements:

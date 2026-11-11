@@ -1,3 +1,4 @@
+import { getEventListeners } from 'node:events';
 import { describe, expect, test, vi } from 'vitest';
 import { PromiseCancellable } from '#index.js';
 import { waitForPromise } from '#utils.js';
@@ -10,6 +11,23 @@ function deferred<T>() {
     reject = no;
   });
   return { promise, resolve, reject };
+}
+
+function observePromise(promise: Promise<unknown>) {
+  const observation: { state: string; reason?: unknown } = {
+    state: 'pending',
+  };
+  void Promise.prototype.then.call(
+    promise,
+    () => {
+      observation.state = 'fulfilled';
+    },
+    (reason: unknown) => {
+      observation.state = 'rejected';
+      observation.reason = reason;
+    },
+  );
+  return observation;
 }
 
 describe('borrowed waiting', () => {
@@ -95,11 +113,227 @@ describe('borrowed waiting', () => {
     source.reject('later source failure');
     await Promise.resolve();
   });
+
+  test('CASE-WAIT-REENTRANT-SETUP: an abort during registration does not hide a later setup failure', async () => {
+    const controller = new AbortController();
+    const add = controller.signal.addEventListener.bind(controller.signal);
+    const setup = { setup: true };
+    vi.spyOn(controller.signal, 'addEventListener').mockImplementation(
+      (...args) => {
+        add(...args);
+        controller.abort('requested during setup');
+        throw setup;
+      },
+    );
+    await expect(
+      waitForPromise(deferred<number>().promise, controller.signal),
+    ).rejects.toBe(setup);
+  });
+
+  test('CASE-WAIT-REENTRANT-SETUP-CLEANUP: setup and cleanup failure roles survive an abort during registration', async () => {
+    const controller = new AbortController();
+    const add = controller.signal.addEventListener.bind(controller.signal);
+    const setup = { setup: true };
+    const cleanup = { cleanup: true };
+    vi.spyOn(controller.signal, 'addEventListener').mockImplementation(
+      (...args) => {
+        add(...args);
+        controller.abort('requested during setup');
+        throw setup;
+      },
+    );
+    vi.spyOn(controller.signal, 'removeEventListener').mockImplementation(
+      () => {
+        throw cleanup;
+      },
+    );
+    try {
+      await waitForPromise(deferred<number>().promise, controller.signal);
+      throw new Error('expected setup failure');
+    } catch (failure) {
+      expect(failure).toBeInstanceOf(SuppressedError);
+      expect((failure as SuppressedError).error).toBe(cleanup);
+      expect((failure as SuppressedError).suppressed).toBe(setup);
+    }
+  });
+
+  test('CASE-WAIT-REENTRANT-INSTALL: cleanup follows completed listener installation', async () => {
+    const controller = new AbortController();
+    const add = controller.signal.addEventListener.bind(controller.signal);
+    const remove = controller.signal.removeEventListener.bind(
+      controller.signal,
+    );
+    let listener: Parameters<AbortSignal['addEventListener']>[1] | null = null;
+    vi.spyOn(controller.signal, 'addEventListener').mockImplementation(
+      (...args) => {
+        listener = args[1];
+        controller.abort('requested during setup');
+        const event = new Event('abort');
+        if (typeof listener === 'function') {
+          listener.call(controller.signal, event);
+        } else {
+          listener?.handleEvent(event);
+        }
+        add(...args);
+      },
+    );
+    const result = waitForPromise(
+      deferred<number>().promise,
+      controller.signal,
+    );
+    try {
+      await expect(result).rejects.toBe('requested during setup');
+      expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0);
+    } finally {
+      if (listener != null) remove('abort', listener);
+    }
+  });
+
+  test('CASE-WAIT-REENTRANT-ABORT: successful registration finishes before removal and observes later source failure', async () => {
+    const controller = new AbortController();
+    const source = deferred<number>();
+    const add = controller.signal.addEventListener.bind(controller.signal);
+    const remove = vi.spyOn(controller.signal, 'removeEventListener');
+    vi.spyOn(controller.signal, 'addEventListener').mockImplementation(
+      (...args) => {
+        add(...args);
+        controller.abort('requested during setup');
+        expect(remove).not.toHaveBeenCalled();
+      },
+    );
+    await expect(
+      waitForPromise(source.promise, controller.signal),
+    ).rejects.toBe('requested during setup');
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0);
+    source.reject(new Error('late source failure remains observed'));
+    await Promise.resolve();
+  });
+
+  test('CASE-WAIT-PREABORT-NO-UNLINK: an unattempted registration requires no cleanup', async () => {
+    const controller = new AbortController();
+    const reason = { aborted: true };
+    controller.abort(reason);
+    const remove = vi.spyOn(controller.signal, 'removeEventListener');
+    remove.mockImplementation(() => {
+      throw new Error('unexpected removal');
+    });
+    await expect(
+      waitForPromise(deferred<number>().promise, controller.signal),
+    ).rejects.toBe(reason);
+    expect(remove).not.toHaveBeenCalled();
+  });
 });
 
 describe('request-only cancellable promises', () => {
   test('CASE-PROMISE-EXECUTOR: a non-function executor throws synchronously', () => {
     expect(() => new PromiseCancellable(null as never)).toThrow(TypeError);
+  });
+
+  test('CASE-PROMISE-SELF-RESOLUTION: a continuation rejects when it returns itself', async () => {
+    const native: Promise<number> = Promise.resolve(1).then(() => native);
+    const child: PromiseCancellable<number> = PromiseCancellable.resolve(
+      1,
+    ).then(() => child);
+    const nativeResult = observePromise(native);
+    const childResult = observePromise(child);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(nativeResult.state).toBe('rejected');
+    expect(nativeResult.reason).toBeInstanceOf(TypeError);
+    expect(childResult.state).toBe('rejected');
+    expect(childResult.reason).toBeInstanceOf(TypeError);
+  });
+
+  test('CASE-PROMISE-THENABLE-SELF: a thenable resolving to the continuation rejects', async () => {
+    const native: Promise<number> = Promise.resolve(1).then(
+      () =>
+        ({
+          then: (resolve: (value: Promise<number>) => void) => resolve(native),
+        }) as unknown as PromiseLike<number>,
+    );
+    const child: PromiseCancellable<number> = PromiseCancellable.resolve(
+      1,
+    ).then(
+      () =>
+        ({
+          then: (resolve: (value: PromiseCancellable<number>) => void) =>
+            resolve(child),
+        }) as unknown as PromiseLike<number>,
+    );
+    const nativeResult = observePromise(native);
+    const childResult = observePromise(child);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(nativeResult.state).toBe('rejected');
+    expect(nativeResult.reason).toBeInstanceOf(TypeError);
+    expect(childResult.state).toBe('rejected');
+    expect(childResult.reason).toBeInstanceOf(TypeError);
+  });
+
+  test('CASE-PROMISE-RECOVERY-SELF: a rejection handler returning its continuation rejects', async () => {
+    const native: Promise<number> = Promise.reject('failure').catch(
+      () => native,
+    );
+    const child: PromiseCancellable<number> = PromiseCancellable.reject<number>(
+      'failure',
+    ).catch(() => child);
+    const nativeResult = observePromise(native);
+    const childResult = observePromise(child);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(nativeResult.state).toBe('rejected');
+    expect(nativeResult.reason).toBeInstanceOf(TypeError);
+    expect(childResult.state).toBe('rejected');
+    expect(childResult.reason).toBeInstanceOf(TypeError);
+  });
+
+  test('CASE-PROMISE-REACTION-FAILURES: callback and thenable getter failures retain identity', async () => {
+    const callbackFailure = { callback: true };
+    const getterFailure = { getter: true };
+    await expect(
+      PromiseCancellable.resolve(1).then(() => {
+        throw callbackFailure;
+      }),
+    ).rejects.toBe(callbackFailure);
+    await expect(
+      PromiseCancellable.reject('failure').catch(() => {
+        throw callbackFailure;
+      }),
+    ).rejects.toBe(callbackFailure);
+    const value = {
+      get then(): never {
+        throw getterFailure;
+      },
+    };
+    await expect(PromiseCancellable.resolve(1).then(() => value)).rejects.toBe(
+      getterFailure,
+    );
+  });
+
+  test('CASE-PROMISE-ASSIMILATE-ONCE: a continuation reads a returned then getter once', async () => {
+    let nativeReads = 0;
+    let childReads = 0;
+    const nativeValue = {
+      get then() {
+        nativeReads += 1;
+        return undefined;
+      },
+    };
+    const childValue = {
+      get then() {
+        childReads += 1;
+        return undefined;
+      },
+    };
+    const nativeResult = observePromise(
+      Promise.resolve(1).then(() => nativeValue),
+    );
+    const childResult = observePromise(
+      PromiseCancellable.resolve(1).then(() => childValue),
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(nativeResult.state).toBe('fulfilled');
+    expect(childResult.state).toBe('fulfilled');
+    expect(nativeReads).toBe(1);
+    expect(childReads).toBe(1);
   });
 
   test('CASE-PROMISE-POLICY: listener registration cannot select cancellation policy', async () => {

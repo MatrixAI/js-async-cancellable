@@ -92,6 +92,29 @@ describe('cancellation provider and contexts integration', () => {
     }
   });
 
+  test('CASE-CONTEXT-WAIT-REENTRANT-SETUP: setup failure remains visible through the scope and its cleanup', async () => {
+    const parent = new AbortController();
+    const setup = { setup: true };
+    const remove = vi.spyOn(parent.signal, 'removeEventListener');
+    const work = createCancellationScope()(
+      async ({ signal }: ContextCancellation) => {
+        const add = signal.addEventListener.bind(signal);
+        vi.spyOn(signal, 'addEventListener').mockImplementation((...args) => {
+          add(...args);
+          parent.abort('requested during setup');
+          throw setup;
+        });
+        await waitForPromise(deferred().promise, signal);
+      },
+    )({ signal: parent.signal });
+    const outcome = await work.then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect.soft(outcome).toBe(setup);
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
   test('CASE-CONTEXT-GENERATOR: an explicitly owned generator retains cancellation links through terminal cleanup', async () => {
     const parent = new AbortController();
     const cleanupEntered = deferred();
