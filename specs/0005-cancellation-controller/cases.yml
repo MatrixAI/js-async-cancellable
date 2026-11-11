@@ -64,6 +64,12 @@ cases:
       - adr.md#REQ-CANCEL-CONTROLLER-004
       - adr.md#REQ-CANCEL-CONTROLLER-007
     limit: Failed installation and cleanup are followed by a successful new attachment.
+  - id: CASE-CANCEL-REENTRANT-SETUP-RETRY
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-004
+      - adr.md#REQ-CANCEL-CONTROLLER-007
+    limit: Reentrant close precedes failed installation and removal; a later close retries removal.
   - id: CASE-CANCEL-UNLINK-REENTRANT
     test: ../../tests/cancellation.test.ts
     requirements:
@@ -85,6 +91,11 @@ cases:
     requirements:
       - adr.md#REQ-CANCEL-CONTROLLER-002
     limit: Public owner, two siblings, and one upstream signal.
+  - id: CASE-CANCEL-SYNTHETIC
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTROLLER-002
+    limit: A synthetic event does not cancel the owner or prevent a later genuine request.
   - id: CASE-CANCEL-PREABORT
     test: ../../tests/cancellation.test.ts
     requirements:

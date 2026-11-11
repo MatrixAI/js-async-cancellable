@@ -21,6 +21,18 @@ cases:
       - adr.md#REQ-CANCEL-PROMISE-001
       - adr.md#REQ-CANCEL-WAITER-002
     limit: Pre-aborted shared controller and an immediately cancelled early wait.
+  - id: CASE-PROMISE-EARLY-SYNTHETIC
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A synthetic event does not prevent an early wait from resolving with its source.
+  - id: CASE-PROMISE-EARLY-SYNTHETIC-THEN-ABORT
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A synthetic event does not prevent a later real request from rejecting an early wait.
   - id: CASE-PROMISE-CHAIN
     test: ../../tests/PromiseCancellable.test.ts
     requirements:

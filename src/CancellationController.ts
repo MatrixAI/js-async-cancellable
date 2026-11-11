@@ -50,23 +50,26 @@ class CancellationController extends AbortController implements Cancellation {
         installing: true,
         removing: false,
         propagate: () => {
-          if (created.active && !this.closed) this.abort(signal.reason);
+          if (created.active && !this.closed && signal.aborted) {
+            this.abort(signal.reason);
+          }
         },
       };
       this.links.set(signal, created);
       try {
-        signal.addEventListener('abort', created.propagate, { once: true });
+        // Synthetic abort events must not consume the listener for a real abort.
+        signal.addEventListener('abort', created.propagate);
         if (signal.aborted) created.propagate();
         if (this.closed) {
           // A structural signal or abort observer may close during setup.
-          created.active = false;
-          this.links.set(signal, created);
           throw new Error('Cancellation controller closed during link setup');
         }
         created.installing = false;
       } catch (primary) {
         created.installing = false;
         created.active = false;
+        // Reentrant close may have removed tracking before installation failed.
+        this.links.set(signal, created);
         try {
           this.removeLink(created);
         } catch (cleanup) {

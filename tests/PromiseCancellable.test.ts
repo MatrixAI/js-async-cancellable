@@ -161,6 +161,35 @@ describe('request-only cancellable promises', () => {
     await source.promise;
   });
 
+  test('CASE-PROMISE-EARLY-SYNTHETIC: an abort event without an abort state does not reject the wait', async () => {
+    const source = deferred<number>();
+    const controller = new AbortController();
+    const promise = PromiseCancellable.from(source.promise, {
+      policy: 'early',
+      controller,
+    });
+    const observed = expect(promise).resolves.toBe(13);
+    controller.signal.dispatchEvent(new Event('abort'));
+    expect(controller.signal.aborted).toBe(false);
+    source.resolve(13);
+    await observed;
+  });
+
+  test('CASE-PROMISE-EARLY-SYNTHETIC-THEN-ABORT: a genuine request remains observable after a synthetic event', async () => {
+    const source = deferred<number>();
+    const controller = new AbortController();
+    const reason = { genuine: true };
+    const promise = PromiseCancellable.from(source.promise, {
+      policy: 'early',
+      controller,
+    });
+    const observed = expect(promise).rejects.toBe(reason);
+    controller.signal.dispatchEvent(new Event('abort'));
+    controller.abort(reason);
+    source.resolve(13);
+    await observed;
+  });
+
   test('CASE-PROMISE-NATIVE: native chain and aggregation semantics do not acquire borrowed inputs', async () => {
     await expect(
       PromiseCancellable.resolve(2).then((n) => n + 1),

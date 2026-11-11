@@ -1,4 +1,5 @@
 import type { ContextCancellation, ContextOperation } from '@matrixai/contexts';
+import { getEventListeners } from 'node:events';
 import { describe, expect, test, vi } from 'vitest';
 import { bracketResource } from '@matrixai/contexts';
 import * as packageRoot from '#index.js';
@@ -109,6 +110,21 @@ describe('provider-owned directional cancellation', () => {
     closed.close();
     closed.abort('local request');
     expect(closed.signal.reason).toBe('local request');
+  });
+
+  test('CASE-CANCEL-SYNTHETIC: an abort event without an abort state does not cancel or consume the link', () => {
+    const parent = new AbortController();
+    const owner = new CancellationController(parent.signal);
+    const reason = { genuine: true };
+
+    parent.signal.dispatchEvent(new Event('abort'));
+    const abortedAfterEvent = owner.signal.aborted;
+    parent.abort(reason);
+    const forwardedReason = owner.signal.reason;
+    owner.close();
+
+    expect.soft(abortedAfterEvent).toBe(false);
+    expect(forwardedReason).toBe(reason);
   });
 
   test('CASE-CANCEL-PREABORT: a pre-aborted parent is propagated before body entry', async () => {
@@ -470,6 +486,40 @@ describe('provider-owned directional cancellation', () => {
     expect(owner.signal.reason).toBe(reason);
     detach();
     owner.close();
+  });
+
+  test('CASE-CANCEL-REENTRANT-SETUP-RETRY: close retries cleanup after reentrant close and failed installation', () => {
+    const upstream = new AbortController();
+    const owner = new CancellationController();
+    const add = upstream.signal.addEventListener.bind(upstream.signal);
+    const remove = upstream.signal.removeEventListener.bind(upstream.signal);
+    const setup = { setup: true };
+    const cleanup = { cleanup: true };
+    const removeSpy = vi.spyOn(upstream.signal, 'removeEventListener');
+    removeSpy.mockImplementationOnce((...args) => remove(...args));
+    removeSpy.mockImplementationOnce(() => {
+      throw cleanup;
+    });
+    vi.spyOn(upstream.signal, 'addEventListener').mockImplementation(
+      (...args) => {
+        owner.close();
+        add(...args);
+        throw setup;
+      },
+    );
+
+    try {
+      owner.link(upstream.signal);
+      throw new Error('expected setup failure');
+    } catch (failure) {
+      expect(failure).toBeInstanceOf(SuppressedError);
+      expect((failure as SuppressedError).error).toBe(cleanup);
+      expect((failure as SuppressedError).suppressed).toBe(setup);
+    }
+    expect(getEventListeners(upstream.signal, 'abort')).toHaveLength(1);
+    owner.close();
+    expect.soft(removeSpy).toHaveBeenCalledTimes(3);
+    expect(getEventListeners(upstream.signal, 'abort')).toHaveLength(0);
   });
 
   test('CASE-CANCEL-UNLINK-REENTRANT: close during removal cannot claim it completed', () => {

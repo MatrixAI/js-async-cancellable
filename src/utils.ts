@@ -64,7 +64,9 @@ function waitForPromise<T>(
       if (fulfilled) current.resolve(result as Awaited<T>);
       else current.reject(result);
     };
-    const abort = () => finish(false, signal.reason);
+    const abort = () => {
+      if (signal.aborted) finish(false, signal.reason);
+    };
     // Both callbacks return void and cannot reject their derived promise.
     void source.then(
       (result) => finish(true, result),
@@ -74,7 +76,8 @@ function waitForPromise<T>(
       if (signal.aborted) {
         abort();
       } else {
-        signal.addEventListener('abort', abort, { once: true });
+        // Synthetic abort events must not consume the listener for a real abort.
+        signal.addEventListener('abort', abort);
         if (signal.aborted) abort();
       }
     } catch (reason) {
