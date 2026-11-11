@@ -1,0 +1,157 @@
+version: 1
+scope: Active requirement-to-case bindings; test execution and decision acceptance are separate.
+binding:
+  runner: Vitest through the provider test command
+  command: npm test
+  mapping: These cases provide bounded evidence and do not imply complete coverage.
+cases:
+  - id: CASE-PROMISE-EXECUTOR
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+    limit: A non-function executor throws synchronously.
+  - id: CASE-PROMISE-ADOPTION
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+    limit: Committed pending thenable and settled value after a request.
+  - id: CASE-PROMISE-FROM
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: Pre-aborted shared controller and an immediately cancelled early wait.
+  - id: CASE-PROMISE-EARLY-SYNTHETIC
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A synthetic event does not prevent an early wait from resolving with its source.
+  - id: CASE-PROMISE-EARLY-SYNTHETIC-THEN-ABORT
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-001
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A synthetic event does not prevent a later real request from rejecting an early wait.
+  - id: CASE-PROMISE-CHAIN
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: One cancelled child and one independent sibling.
+  - id: CASE-PROMISE-SELF-RESOLUTION
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: A fulfillment callback returns its own continuation, compared with a native promise.
+  - id: CASE-PROMISE-THENABLE-SELF
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: A returned thenable resolves to the continuation, compared with a native promise.
+  - id: CASE-PROMISE-RECOVERY-SELF
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: A rejection callback returns its own continuation, compared with a native promise.
+  - id: CASE-PROMISE-REACTION-FAILURES
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: Fulfillment, rejection, and thenable-getter failures retain their identities.
+  - id: CASE-PROMISE-ASSIMILATE-ONCE
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: A returned non-thenable object has its then getter read once, as for a native continuation.
+  - id: CASE-PROMISE-CHAIN-SHARED
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: Explicit child authority after parent settlement.
+  - id: CASE-PROMISE-INTEROP
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: Selected native identity, species, assimilation, and recovery cases.
+  - id: CASE-PROMISE-SUBCLASS
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: Continuations return the base class while a compatible static receiver constructs its subclass.
+  - id: CASE-CANCEL-EXPORTS
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-003
+      - adr.md#REQ-CANCEL-POLICY-001
+    limit: The root runtime exports do not offer an owned execution engine.
+  - id: CASE-PROMISE-NATIVE
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-POLICY-001
+    limit: Native result combinators use borrowed inputs without taking ownership.
+  - id: CASE-PROMISE-FINALLY
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-PROMISE-002
+    limit: One asynchronous finalizer retains the primary rejection.
+  - id: CASE-CANCEL-COMPLETION
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-COMPLETION-001
+      - adr.md#REQ-CANCEL-SCOPE-ENTRY-001
+    limit: A scope retains links through represented work and gated cleanup.
+  - id: CASE-CANCEL-FAILURE-ROLES
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-COMPLETION-001
+    limit: A body failure and multiple unlink failures remain observable in their original roles.
+  - id: CASE-CANCEL-REUSE
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-SCOPE-ENTRY-001
+    limit: Deferred construction and two concurrent invocations.
+  - id: CASE-CANCEL-PREABORT
+    test: ../../tests/cancellation.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-SCOPE-ENTRY-001
+    limit: Scope body receives one already-aborted upstream reason.
+  - id: CASE-CANCEL-TYPES
+    test: ../../tests/cancellation.test-d.ts
+    requirements:
+      - adr.md#REQ-CANCEL-SCOPE-ENTRY-001
+    limit: Structural scope requirements and ordinary signal compatibility.
+  - id: CASE-WAIT-BORROWED
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: Abandoned wait and observed later source rejection.
+  - id: CASE-WAIT-SETUP
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: Listener setup and removal failure with later source rejection observed.
+  - id: CASE-WAIT-REENTRANT-SETUP
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: Registration fails after a reentrant request and its setup failure remains observable.
+  - id: CASE-WAIT-REENTRANT-SETUP-CLEANUP
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A reentrant request precedes simultaneous registration and removal failures.
+  - id: CASE-WAIT-REENTRANT-INSTALL
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A callback before registration returns does not leave the subsequently installed listener.
+  - id: CASE-WAIT-REENTRANT-ABORT
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A request during successful registration waits for installation and observes later source rejection.
+  - id: CASE-WAIT-PREABORT-NO-UNLINK
+    test: ../../tests/PromiseCancellable.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-WAITER-002
+    limit: A pre-aborted signal does not remove a listener that was never registered.

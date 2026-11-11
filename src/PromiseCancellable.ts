@@ -1,288 +1,227 @@
-import type { PromiseCancellableController } from './types.js';
+import type { PromiseCancellableOptions } from './types.js';
+import { waitForPromise } from './utils.js';
 
+/**
+ * A native promise with cooperative cancellation authority. Construction alone
+ * does not reject the promise when cancellation is requested: the executor must
+ * observe the signal and decide how to respond. Native resolving functions
+ * commit once, including when adopting a thenable; detached work is not
+ * represented by this promise.
+ *
+ * Continuations have independent controllers by default and receive the result's
+ * signal. Native result combinators borrow their inputs; they do not own or
+ * cancel them. Use `from` to select an explicit waiting policy.
+ */
 class PromiseCancellable<T> extends Promise<T> {
+  public readonly signal: AbortSignal;
+  protected readonly controller: AbortController;
+
   public static get [Symbol.species](): PromiseConstructor {
     return Promise;
   }
 
-  public static resolve(): PromiseCancellable<void>;
-  public static resolve<T>(value: T | PromiseLike<T>): PromiseCancellable<T>;
-  public static resolve<T>(
-    value?: T | PromiseLike<T>,
-  ): PromiseCancellable<void | T> {
-    if (value instanceof PromiseCancellable) return value;
-    return super.resolve(value) as PromiseCancellable<void | T>;
+  /**
+   * Start the executor with this promise's signal. Supplying a controller shares
+   * its exact authority and signal, including after promise settlement.
+   */
+  public constructor(
+    executor: (
+      resolve: (value: T | PromiseLike<T>) => void,
+      reject: (reason?: unknown) => void,
+      signal: AbortSignal,
+    ) => void,
+    controller: AbortController = new AbortController(),
+  ) {
+    if (typeof executor !== 'function') {
+      throw new TypeError('Promise executor must be a function');
+    }
+    super((resolve, reject) => {
+      executor(resolve, reject, controller.signal);
+    });
+    this.controller = controller;
+    this.signal = controller.signal;
   }
 
-  public static reject<T = never>(reason?: any): PromiseCancellable<T> {
+  public static resolve(): PromiseCancellable<void>;
+  public static resolve<T>(
+    value: T | PromiseLike<T>,
+  ): PromiseCancellable<Awaited<T>>;
+  public static resolve<T>(
+    value?: T | PromiseLike<T>,
+  ): PromiseCancellable<Awaited<T> | void> {
+    return super.resolve(value) as PromiseCancellable<Awaited<T> | void>;
+  }
+
+  public static reject<T = never>(reason?: unknown): PromiseCancellable<T> {
     return super.reject(reason) as PromiseCancellable<T>;
+  }
+
+  /**
+   * Create a waiting boundary over a borrowed value or promise-like input.
+   * `request-only` waits for the input despite a request; `early` can reject the
+   * wait on a request without cancelling or joining the input. A late rejection
+   * remains observed, but is not delivered as a separate completion outcome.
+   * Owners needing that outcome must retain the original work or another
+   * completion-bearing result. A supplied controller shares its exact authority.
+   * A listener setup failure takes precedence over a reentrant request during
+   * setup; a simultaneous removal failure preserves both failure values.
+   */
+  public static from<T>(
+    value: T | PromiseLike<T>,
+    options: PromiseCancellableOptions,
+  ): PromiseCancellable<Awaited<T>> {
+    if (options?.policy !== 'early' && options?.policy !== 'request-only') {
+      throw new TypeError('A valid waiting policy is required');
+    }
+    const controller = options.controller ?? new AbortController();
+    const result =
+      options.policy === 'early'
+        ? waitForPromise(value, controller.signal)
+        : Promise.resolve(value);
+    return new this<Awaited<T>>((resolve, reject) => {
+      void result.then(resolve, reject);
+    }, controller);
   }
 
   public static all<T extends readonly unknown[] | []>(
     values: T,
-    controller?: PromiseCancellableController,
-  ): PromiseCancellable<{ -readonly [P in keyof T]: Awaited<T[P]> }>;
+  ): PromiseCancellable<{
+    -readonly [P in keyof T]: Awaited<T[P]>;
+  }>;
   public static all<T>(
     values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<Awaited<T>[]>;
   public static all<T>(
     values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<Awaited<T>[]> {
-    // The `super.all` calls `new PromiseCancellable`
-    const pC = super.all(values) as PromiseCancellable<Awaited<T>[]>;
-    if (typeof controller === 'function') {
-      pC.abortController = new AbortController();
-      controller(pC.abortController.signal);
-    } else if (controller != null) {
-      pC.abortController = controller;
-    }
-    return pC;
+    return super.all(values) as PromiseCancellable<Awaited<T>[]>;
   }
 
   public static allSettled<T extends readonly unknown[] | []>(
     values: T,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<{
     -readonly [P in keyof T]: PromiseSettledResult<Awaited<T[P]>>;
   }>;
   public static allSettled<T>(
     values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<PromiseSettledResult<Awaited<T>>[]>;
   public static allSettled<T>(
     values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<PromiseSettledResult<Awaited<T>>[]> {
-    // The `super.allSettled` calls `new PromiseCancellable`
-    const pC = super.allSettled(values) as PromiseCancellable<
+    return super.allSettled(values) as PromiseCancellable<
       PromiseSettledResult<Awaited<T>>[]
     >;
-    if (typeof controller === 'function') {
-      pC.abortController = new AbortController();
-      controller(pC.abortController.signal);
-    } else if (controller != null) {
-      pC.abortController = controller;
-    }
-    return pC;
   }
 
-  public static race<T extends readonly unknown[] | []>(
-    values: T,
-    controller?: PromiseCancellableController,
-  ): PromiseCancellable<Awaited<T[number]>>;
   public static race<T>(
     values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
-  ): PromiseCancellable<Awaited<T>>;
-  public static race<T>(
-    values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<Awaited<T>> {
-    // The `super.race` calls `new PromiseCancellable`
-    const pC = super.race(values) as PromiseCancellable<Awaited<T>>;
-    if (typeof controller === 'function') {
-      pC.abortController = new AbortController();
-      controller(pC.abortController.signal);
-    } else if (controller != null) {
-      pC.abortController = controller;
-    }
-    return pC;
+    return super.race(values) as PromiseCancellable<Awaited<T>>;
   }
 
-  public static any<T extends readonly unknown[] | []>(
-    values: T,
-    controller?: PromiseCancellableController,
-  ): PromiseCancellable<Awaited<T[number]>>;
   public static any<T>(
     values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
-  ): PromiseCancellable<Awaited<T>>;
-  public static any<T>(
-    values: Iterable<T | PromiseLike<T>>,
-    controller?: PromiseCancellableController,
   ): PromiseCancellable<Awaited<T>> {
-    // The `super.any` calls `new PromiseCancellable`
-    const pC = super.any(values) as PromiseCancellable<Awaited<T>>;
-    if (typeof controller === 'function') {
-      pC.abortController = new AbortController();
-      controller(pC.abortController.signal);
-    } else if (controller != null) {
-      pC.abortController = controller;
-    }
-    return pC;
-  }
-
-  public static from<T>(
-    p: PromiseLike<T>,
-    controller?: PromiseCancellableController,
-  ): PromiseCancellable<T> {
-    return new this<T>((resolve, reject) => {
-      void p.then(resolve, reject);
-    }, controller);
-  }
-
-  protected readonly reject: (reason?: any) => void;
-  protected abortController: AbortController;
-
-  public constructor(
-    executor: (
-      resolve: (value: T | PromiseLike<T>) => void,
-      reject: (reason?: any) => void,
-      signal: AbortSignal,
-    ) => void,
-    controller?: PromiseCancellableController,
-  ) {
-    let abortController: AbortController;
-    let signal: AbortSignal;
-    let signalHandled: boolean;
-    if (typeof controller === 'function') {
-      abortController = new AbortController();
-      controller(abortController.signal);
-      signal = abortController.signal;
-      signalHandled = true;
-    } else if (controller != null) {
-      abortController = controller;
-      signal = controller.signal;
-      signalHandled = true;
-    } else {
-      abortController = new AbortController();
-      signal = new Proxy(abortController.signal, {
-        get(target, prop, receiver) {
-          if (prop === 'addEventListener') {
-            return function addEventListener(...args) {
-              signalHandled = true;
-              return target[prop].apply(this, args);
-            };
-          } else {
-            return Reflect.get(target, prop, receiver);
-          }
-        },
-        set(target, prop, value) {
-          if (prop === 'onabort') {
-            signalHandled = true;
-          }
-          return Reflect.set(target, prop, value);
-        },
-        deleteProperty(target, prop) {
-          if (prop === 'onabort') {
-            signalHandled = true;
-          }
-          return Reflect.deleteProperty(target, prop);
-        },
-      });
-      signalHandled = false;
-    }
-    let reject_: (reason?: any) => void;
-    super((resolve, reject) => {
-      reject_ = (reason?: any) => {
-        // This swaps the `DOMException [AbortError]` for `undefined`.
-        // This is because we expect aborting or cancelling with `undefined`
-        // should mean rejection of `undefined`.
-        if (reason instanceof DOMException && reason.name === 'AbortError') {
-          reason = undefined;
-        }
-        reject(reason);
-      };
-      executor(resolve, reject_, signal);
-    });
-    if (!signalHandled) {
-      abortController.signal.addEventListener(
-        'abort',
-        () => {
-          reject_(abortController.signal.reason);
-        },
-        { once: true },
-      );
-    }
-    this.reject = reject_!;
-    this.abortController = abortController;
+    return super.any(values) as PromiseCancellable<Awaited<T>>;
   }
 
   public get [Symbol.toStringTag](): string {
-    return this.constructor.name;
+    return 'PromiseCancellable';
   }
 
-  public cancel(reason?: any): void {
-    this.abortController.abort(reason);
+  /**
+   * Request abortion of this promise's controller without forcing settlement or
+   * completion. With a shared controller, observers share this request even if
+   * the promise has already settled.
+   */
+  public cancel(reason?: unknown): void {
+    this.controller.abort(reason);
   }
 
+  /**
+   * Create a continuation with independent cancellation authority by default.
+   * Callbacks receive its signal; a request alone does not skip them or cancel
+   * the parent. Supplying a controller shares that authority with the result.
+   * Continuations return the base cancellable promise; this method does not
+   * preserve the identity of a subclass of this class. Callback results use the
+   * returned promise's native resolution, including self-resolution rejection.
+   */
   public then<TResult1 = T, TResult2 = never>(
     onFulfilled?:
       | ((value: T, signal: AbortSignal) => TResult1 | PromiseLike<TResult1>)
-      | undefined
       | null,
     onRejected?:
       | ((reason: any, signal: AbortSignal) => TResult2 | PromiseLike<TResult2>)
-      | undefined
       | null,
-    controller?: PromiseCancellableController,
+    controller: AbortController = new AbortController(),
   ): PromiseCancellable<TResult1 | TResult2> {
-    // eslint-disable-next-line prefer-const
-    let signal;
-    let onFulfilled_;
-    let onRejected_;
-    if (typeof onFulfilled === 'function') {
-      onFulfilled_ = (value: T) => onFulfilled(value, signal);
-    }
-    if (typeof onRejected === 'function') {
-      onRejected_ = (reason: any) => onRejected(reason, signal);
-    }
-    // The `super.then` uses `Symbol.species`, and it is a native promise
-    const p = super.then<TResult1, TResult2>(onFulfilled_, onRejected_);
-    const pC = PromiseCancellable.from(p, controller);
-    signal = pC.abortController.signal;
-    return pC;
+    let resolveChild!: (
+      value: TResult1 | TResult2 | PromiseLike<TResult1 | TResult2>,
+    ) => void;
+    let rejectChild!: (reason?: unknown) => void;
+    const child = new PromiseCancellable<TResult1 | TResult2>(
+      (resolve, reject) => {
+        resolveChild = resolve;
+        rejectChild = reject;
+      },
+      controller,
+    );
+    void super.then(
+      (value) => {
+        if (typeof onFulfilled !== 'function') {
+          resolveChild(value as unknown as TResult1);
+          return;
+        }
+        try {
+          resolveChild(onFulfilled(value, controller.signal));
+        } catch (reason) {
+          rejectChild(reason);
+        }
+      },
+      (reason) => {
+        if (typeof onRejected !== 'function') {
+          rejectChild(reason);
+          return;
+        }
+        try {
+          resolveChild(onRejected(reason, controller.signal));
+        } catch (failure) {
+          rejectChild(failure);
+        }
+      },
+    );
+    return child;
   }
 
+  /** Create a rejection continuation with the same authority policy as `then`. */
   public catch<TResult = never>(
     onRejected?:
       | ((reason: any, signal: AbortSignal) => TResult | PromiseLike<TResult>)
-      | undefined
       | null,
-    controller?: PromiseCancellableController,
+    controller?: AbortController,
   ): PromiseCancellable<T | TResult> {
-    // eslint-disable-next-line prefer-const
-    let signal;
-    let onRejected_;
-    if (typeof onRejected === 'function') {
-      onRejected_ = (reason: any) => onRejected(reason, signal);
-    }
-    // The `super.catch` calls `this.then`
-    // so this is already a `PromiseCancellable`
-    const pC = super.catch(onRejected_) as PromiseCancellable<T | TResult>;
-    if (typeof controller === 'function') {
-      pC.abortController = new AbortController();
-      controller(pC.abortController.signal);
-    } else if (controller != null) {
-      pC.abortController = controller;
-    }
-    signal = pC.abortController.signal;
-    return pC;
+    return this.then(undefined, onRejected, controller);
   }
 
+  /**
+   * Create a finalizing continuation with the same authority policy as `then`.
+   * An asynchronous finalizer remains part of the returned result.
+   */
   public finally(
-    onFinally?: ((signal: AbortSignal) => void) | undefined | null,
-    controller?: PromiseCancellableController,
+    onFinally?: ((signal: AbortSignal) => void) | null,
+    controller?: AbortController,
   ): PromiseCancellable<T> {
-    // eslint-disable-next-line prefer-const
-    let signal;
-    let onFinally_;
-    if (typeof onFinally === 'function') {
-      onFinally_ = () => onFinally(signal);
+    if (typeof onFinally !== 'function') {
+      return this.then(undefined, undefined, controller);
     }
-    // The `super.finally` calls `this.then`
-    // so this is already a `PromiseCancellable`
-    const pC = super.finally(onFinally_) as PromiseCancellable<T>;
-    if (typeof controller === 'function') {
-      pC.abortController = new AbortController();
-      controller(pC.abortController.signal);
-    } else if (controller != null) {
-      pC.abortController = controller;
-    }
-    signal = pC.abortController.signal;
-    return pC;
+    return this.then(
+      (value, signal) => Promise.resolve(onFinally(signal)).then(() => value),
+      (reason, signal) =>
+        Promise.resolve(onFinally(signal)).then(() => {
+          throw reason;
+        }),
+      controller,
+    );
   }
 }
 

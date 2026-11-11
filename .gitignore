@@ -1,7 +1,10 @@
 /tmp
 /dist
+/.direnv
+/.devenv
 .env*
 !.env.example
+!.envrc
 # nix
 /result*
 /builds

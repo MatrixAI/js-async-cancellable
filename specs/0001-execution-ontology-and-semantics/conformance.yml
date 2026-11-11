@@ -1,0 +1,104 @@
+schemaVersion: 1
+semanticEdition: execution-semantics-1
+decisionStatus: proposed
+requirementSatisfaction: not-established
+evidenceScope: bounded-candidate-tests
+verification:
+  sourceKind: dirty-git-backed-snapshot
+  baseRevision: 7882bb9c6c2edf3170afdf726d4eb270d102a387
+  archive: /nix/store/c304nb4pd3v5lh1h8x1xbdcyjd35xs67-matrixai-async-cancellable-2.0.1.tgz
+  archiveSha256: 0bc9ce223b63b8399600994b1b727c40921c91826dc34884eb1fb25b6e396be8
+  check: /nix/store/m9y2i45x8pqyasjh1bvknc9xrz9wvhzm-async-cancellable-verify-0
+  runtimeSuites: 3
+  runtimeTests: 29
+  nativeConformance: passed
+  hermeticConformance: passed
+  packedDeclarations: passed
+  portableImports: passed
+  lint: not-run-owner-paused
+  browser: not-established
+  downstreamMigration: incomplete
+  release: not-authorized
+  notes:
+    - Store paths identify local retained artifacts, not dependency coordinates.
+    - This receipt describes the snapshot before this receipt was attached, not an exact committed revision.
+    - Passing bounded checks does not accept the decision or establish every requirement.
+records:
+  - id: REQ-EXEC-CANCELLATION-001
+    spec: adr.md#REQ-EXEC-CANCELLATION-001
+    evidenceStatus: partial
+    cases:
+      - CASE-CANCEL-DIRECTION
+      - CASE-CANCEL-PREABORT
+      - CASE-WAIT-REASON
+    sources:
+      - ../../tests/cancellation.test.ts
+      - ../../tests/PromiseCancellable.test.ts
+  - id: REQ-EXEC-LINKS-001
+    spec: adr.md#REQ-EXEC-LINKS-001
+    evidenceStatus: partial
+    cases:
+      - CASE-CANCEL-COMPLETION
+      - CASE-CANCEL-SETUP
+      - CASE-FACADE-LIFETIME
+    sources:
+      - ../../tests/cancellation.test.ts
+      - ../../tests/PromiseCancellable.test.ts
+  - id: REQ-EXEC-COMPLETION-001
+    spec: adr.md#REQ-EXEC-COMPLETION-001
+    evidenceStatus: partial
+    cases:
+      - CASE-EXEC-RACE
+      - CASE-EXEC-ALL
+      - CASE-EXEC-SUBSCRIBERS
+    sources:
+      - ../../tests/execution.test.ts
+  - id: REQ-EXEC-PROPAGATION-001
+    spec: adr.md#REQ-EXEC-PROPAGATION-001
+    evidenceStatus: partial
+    cases:
+      - CASE-EXEC-FANIN
+      - CASE-EXEC-SHIELD
+    sources:
+      - ../../tests/execution.test.ts
+    limitations:
+      - Only direct forwarding, any-source fan-in, fan-out, and omitted forwarding are implemented.
+      - All-source and quorum policies are unsupported, not silently inferred.
+  - id: REQ-EXEC-COMBINATORS-001
+    spec: adr.md#REQ-EXEC-COMBINATORS-001
+    evidenceStatus: partial
+    cases:
+      - CASE-EXEC-ALL
+      - CASE-EXEC-OUTCOMES
+      - CASE-EXEC-RACE
+      - CASE-EXEC-SUCCESS
+      - CASE-EXEC-PARTIAL
+    sources:
+      - ../../tests/execution.test.ts
+  - id: REQ-ASYNC-CANCEL-STAGES-001
+    spec: adr.md#REQ-ASYNC-CANCEL-STAGES-001
+    evidenceStatus: partial
+    cases:
+      - CASE-EXEC-SEQUENCE
+    sources:
+      - ../../tests/execution.test.ts
+    limitations:
+      - Arbitrary recovery and external real-provider handoff worlds remain incomplete.
+  - id: REQ-ASYNC-CANCEL-SHARED-001
+    spec: adr.md#REQ-ASYNC-CANCEL-SHARED-001
+    evidenceStatus: partial
+    cases:
+      - CASE-EXEC-SUBSCRIBERS
+    sources:
+      - ../../tests/execution.test.ts
+    limitations:
+      - Subscription accounting is single-agent; cross-agent supervision is unsupported.
+  - id: REQ-ASYNC-CANCEL-MIGRATION-001
+    spec: adr.md#REQ-ASYNC-CANCEL-MIGRATION-001
+    evidenceStatus: partial
+    sources:
+      - ../../README.md
+      - ../../tests/fixtures/package/types.ts
+      - ../../tests/fixtures/package/smoke.mjs
+    limitations:
+      - Actual timer and lock-dependent lifecycle migration evidence is not yet complete.

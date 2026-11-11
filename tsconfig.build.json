@@ -5,6 +5,7 @@
     "noEmit": false,
     "stripInternal": true
   },
+  "include": ["./src/**/*.ts"],
   "exclude": [
     "./tests/**/*",
     "./scripts/**/*",

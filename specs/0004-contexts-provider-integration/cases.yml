@@ -1,0 +1,37 @@
+version: 1
+scope: Active requirement-to-case bindings; execution and coverage are separate.
+binding:
+  runner: Vitest through the provider test command
+  command: npm test
+  mapping: These cases provide bounded evidence and do not imply complete coverage.
+cases:
+  - id: CASE-CONTEXT-ORDER
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-ORDER-001
+    limit: Two scope orders around a local bracket.
+  - id: CASE-CONTEXT-FAILURE
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-ORDER-001
+    limit: One body failure and one unlink failure.
+  - id: CASE-CONTEXT-WAIT-REENTRANT-SETUP
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-ORDER-001
+    limit: A reentrant waiter setup failure remains visible while the scope releases its link.
+  - id: CASE-CONTEXT-GENERATOR
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-ITERATION-001
+    limit: Explicit internal owner through an async generator's terminal cleanup.
+  - id: CASE-CONTEXT-FUNCTION
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-BOUNDARY-001
+    limit: Shared function adapter with a local scope; no lifecycle authority.
+  - id: CASE-CONTEXT-METHOD
+    test: ../../tests/contexts.test.ts
+    requirements:
+      - adr.md#REQ-CANCEL-CONTEXT-BOUNDARY-001
+    limit: Standard method adapter with a local scope; no downstream provider.
