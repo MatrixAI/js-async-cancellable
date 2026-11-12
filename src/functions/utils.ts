@@ -67,7 +67,7 @@ function cancellable<
   return wrapped;
 }
 
-/** Match the ordinary-data projection accepted by a contexts scope. */
+/** Validate the ordinary-data projection accepted by a contexts scope. */
 function assertContextRecord(value: unknown): asserts value is object {
   if (value == null || typeof value !== 'object') {
     throw new TypeError(

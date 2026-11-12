@@ -3,7 +3,7 @@ import type {
   ContextFunctionOptions,
 } from '@matrixai/contexts';
 import type { CancellationFunctionCheck } from '../functions/types.js';
-import { cancellable as cancellableFunction } from '../functions/cancellable.js';
+import { cancellable as cancellableFunction } from '../functions/index.js';
 
 /** Standard method decorator over the same functional cancellation policy. */
 function cancellable<const Position extends number | 'last'>(

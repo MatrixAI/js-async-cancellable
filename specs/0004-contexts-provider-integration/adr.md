@@ -161,7 +161,7 @@ composition and independent provider policies explicit.
 ## Links
 
 - [Cancellation scope](../../src/utils.ts).
-- [Provider integration cases](../../tests/contexts.test.ts).
+- [Provider integration cases](../../tests/unit/contexts.test.ts).
 - [Packed declaration consumer](../../tests/fixtures/package/types.ts).
 
 ## More Information
@@ -177,11 +177,11 @@ They are not proof of lock, timer, lifecycle, or application integrations.
 
 **Findings:**
 
-| Finding                 | Files                                                              | Lines       | Assessment                                              |
-| ----------------------- | ------------------------------------------------------------------ | ----------- | ------------------------------------------------------- |
-| Structural provider     | [Scope](../../src/utils.ts), [cases](../../tests/contexts.test.ts) | Whole files | Scope and local bracket integration exercised           |
-| Owned generator example | [Cases](../../tests/contexts.test.ts)                              | Generator   | Explicit generator owner retains links through cleanup  |
-| Packed types            | [Consumer](../../tests/fixtures/package/types.ts)                  | Whole file  | Local declaration checks are bounded to selected inputs |
+| Finding                 | Files                                                                   | Lines       | Assessment                                              |
+| ----------------------- | ----------------------------------------------------------------------- | ----------- | ------------------------------------------------------- |
+| Structural provider     | [Scope](../../src/utils.ts), [cases](../../tests/unit/contexts.test.ts) | Whole files | Scope and local bracket integration exercised           |
+| Owned generator example | [Cases](../../tests/unit/contexts.test.ts)                              | Generator   | Explicit generator owner retains links through cleanup  |
+| Packed types            | [Consumer](../../tests/fixtures/package/types.ts)                       | Whole file  | Local declaration checks are bounded to selected inputs |
 
 **Summary:** The provider integration policy is accepted independently. Native
 candidate checks do not establish real lifecycle, timer, lock, browser, or
@@ -199,7 +199,7 @@ hermetic verification; add concrete provider evidence only when available.
 | Finding              | Files                                                    | Lines       | Assessment                                                                           |
 | -------------------- | -------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
 | Separate owned entry | [Scope requirement](adr.md#REQ-CANCEL-CONTEXT-SCOPE-001) | Requirement | The separately specified owned execution entry is absent                             |
-| Historical fixture   | [Type cases](../../tests/cancellation.test-d.ts)         | Whole file  | The earlier packed fixture was removed; current type cases have a different boundary |
+| Historical fixture   | [Type cases](../../tests/unit/cancellation.test-d.ts)    | Whole file  | The earlier packed fixture was removed; current type cases have a different boundary |
 
 **Summary:** The current candidate is non-compliant with the missing
 execution-entry obligation. Its scope cases support selected structural and

@@ -461,8 +461,8 @@ ADR-0004 while preserving the remaining ADR-0004 requirements.
 
 - [Current promise facade](../../src/PromiseCancellable.ts).
 - [Borrowed wait helper](../../src/utils.ts).
-- [Promise and waiting cases](../../tests/PromiseCancellable.test.ts).
-- [Cancellation scope cases](../../tests/cancellation.test.ts).
+- [Promise and waiting cases](../../tests/unit/PromiseCancellable.test.ts).
+- [Cancellation scope cases](../../tests/unit/cancellation.test.ts).
 - [Requirement-to-case bindings](cases.yml).
 
 ## More Information
@@ -501,8 +501,8 @@ check requirement-to-case bindings, and validate all affected records.
 
 | Finding                  | Files                                                    | Lines      | Assessment                                                       |
 | ------------------------ | -------------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
-| Native promise candidate | [Cases](../../tests/PromiseCancellable.test.ts)          | Whole file | Local runtime cases cover selected settlement and chain behavior |
-| Type and scope candidate | [Type cases](../../tests/cancellation.test-d.ts)         | Whole file | Local type cases cover selected API and scope boundaries         |
+| Native promise candidate | [Cases](../../tests/unit/PromiseCancellable.test.ts)     | Whole file | Local runtime cases cover selected settlement and chain behavior |
+| Type and scope candidate | [Type cases](../../tests/unit/cancellation.test-d.ts)    | Whole file | Local type cases cover selected API and scope boundaries         |
 | Consumer integration     | [ADR-0004](../0004-contexts-provider-integration/adr.md) | Decision   | Timer and lifecycle integration remain unverified                |
 
 **Summary:** A local build-before-test run passed the candidate cases. It does
@@ -540,10 +540,10 @@ separately.
 
 **Findings:**
 
-| Finding             | Files                                                   | Lines         | Assessment                                                                       |
-| ------------------- | ------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------- |
-| Subclass boundary   | [Promise cases](../../tests/PromiseCancellable.test.ts) | Subclass case | Continuations return the base class; static construction uses the receiver       |
-| Additional policies | [Cases](cases.yml)                                      | Policy cases  | The current root and borrowed combinators do not offer an owned execution engine |
+| Finding             | Files                                                        | Lines         | Assessment                                                                       |
+| ------------------- | ------------------------------------------------------------ | ------------- | -------------------------------------------------------------------------------- |
+| Subclass boundary   | [Promise cases](../../tests/unit/PromiseCancellable.test.ts) | Subclass case | Continuations return the base class; static construction uses the receiver       |
+| Additional policies | [Cases](cases.yml)                                           | Policy cases  | The current root and borrowed combinators do not offer an owned execution engine |
 
 **Summary:** The continuation identity boundary is explicit and has a bounded
 local case. The conditional execution-policy requirement does not select a new

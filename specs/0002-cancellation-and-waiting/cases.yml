@@ -6,42 +6,42 @@ binding:
   mapping: These cases provide bounded evidence and do not imply complete coverage.
 cases:
   - id: CASE-CANCEL-DIRECTION
-    test: ../../tests/cancellation.test.ts
+    test: ../../tests/unit/cancellation.test.ts
     requirements:
       - adr.md#REQ-CANCEL-SOURCE-001
     limit: Internal linked owners, one upstream, and independent siblings.
   - id: CASE-CANCEL-FANIN
-    test: ../../tests/cancellation.test.ts
+    test: ../../tests/unit/cancellation.test.ts
     requirements:
       - adr.md#REQ-CANCEL-SOURCE-001
     limit: Duplicate links and pre-aborted ordering on an internal owner.
   - id: CASE-CANCEL-SHIELD
-    test: ../../tests/cancellation.test.ts
+    test: ../../tests/unit/cancellation.test.ts
     requirements:
       - adr.md#REQ-CANCEL-SOURCE-001
     limit: Explicitly omitted upstream forwarding in the public scope.
   - id: CASE-CANCEL-COMPLETION
-    test: ../../tests/cancellation.test.ts
+    test: ../../tests/unit/cancellation.test.ts
     requirements:
       - adr.md#REQ-CANCEL-LINK-001
     limit: Retention through represented body work and gated cleanup.
   - id: CASE-CANCEL-SETUP
-    test: ../../tests/cancellation.test.ts
+    test: ../../tests/unit/cancellation.test.ts
     requirements:
       - adr.md#REQ-CANCEL-LINK-001
     limit: One partially installed link and simultaneous setup/unlink failure.
   - id: CASE-WAIT-BORROWED
-    test: ../../tests/PromiseCancellable.test.ts
+    test: ../../tests/unit/PromiseCancellable.test.ts
     requirements:
       - adr.md#REQ-CANCEL-WAIT-001
     limit: A waiter abandons one borrowed promise and observes late rejection.
   - id: CASE-PROMISE-POLICY
-    test: ../../tests/PromiseCancellable.test.ts
+    test: ../../tests/unit/PromiseCancellable.test.ts
     requirements:
       - adr.md#REQ-CANCEL-WAIT-001
     limit: Registering an abort listener does not change request-only behavior.
   - id: CASE-PROMISE-FROM
-    test: ../../tests/PromiseCancellable.test.ts
+    test: ../../tests/unit/PromiseCancellable.test.ts
     requirements:
       - adr.md#REQ-CANCEL-WAIT-001
     limit: Explicit early and request-only policies with a shared controller.

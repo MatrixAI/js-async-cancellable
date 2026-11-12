@@ -8,25 +8,14 @@
 }:
 let
   src = gitignore.gitignoreSource ../..;
-  verify = pkgs.buildNpmPackage {
-    pname = "async-cancellable-verify";
-    version = "0";
-    inherit src nodejs;
+  unit-js = import ./unit-js.nix {
+    inherit
+      pkgs
+      nodejs
+      system
+      src
+      ;
     inherit (npmDependencies) npmDeps npmConfigHook;
-    dontNpmBuild = true;
-    doCheck = true;
-    checkPhase = ''
-      runHook preCheck
-      npm run check:conformance
-      runHook postCheck
-    '';
-    installPhase = ''
-      mkdir -p "$out/artifacts"
-      cp -R tmp/junit "$out/artifacts/junit"
-      cat > "$out/report.json" <<EOF
-      {"schemaVersion":1,"name":"verify","kind":"conformance","status":"passed","system":"${system}","summary":"Node 24 typechecking, tests, and build passed","artifacts":{"junit":"artifacts/junit"}}
-      EOF
-    '';
   };
   lintCheck = lint.mkCheck {
     inherit src;
@@ -37,14 +26,14 @@ let
   };
 in
 {
-  inherit verify;
+  inherit unit-js;
   lint = lintCheck;
   default = pkgs.runCommand "async-cancellable-check-default" { } ''
     mkdir -p "$out/artifacts"
-    ln -s ${verify} "$out/artifacts/verify"
+    ln -s ${unit-js} "$out/artifacts/unit-js"
     ln -s ${lintCheck} "$out/artifacts/lint"
     cat > "$out/report.json" <<EOF
-    {"schemaVersion":1,"name":"default","kind":"aggregate","status":"passed","system":"${system}","artifacts":{"verify":"artifacts/verify/report.json","lint":"artifacts/lint/report.json"}}
+    {"schemaVersion":1,"name":"default","kind":"aggregate","status":"passed","system":"${system}","artifacts":{"unit-js":"artifacts/unit-js/report.json","lint":"artifacts/lint/report.json"}}
     EOF
   '';
 }

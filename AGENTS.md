@@ -6,9 +6,9 @@
   hotset, and prose rules under `.matrixai/matrixai-standards/standards/`.
 - Use Node.js 24 or newer, ES2022/NodeNext ESM, explicit type imports, relative
   source imports, and built-output package imports in tests.
-- Golden commands are `npm run build`, `npm run typecheck`, `npm test`, and
-  `npm run check:conformance`. Use Vitest compile-time tests alongside runtime
-  tests rather than a separate package-consumer test.
+- Golden commands are `npm run build`, `npm test`, `npm run lint`, and
+  `nix flake check`. Use Vitest compile-time tests alongside runtime tests
+  rather than a separate package-consumer test.
 - Use the build-first Vitest runner with explicit test imports as a project
   exception to the library profile, standard decorators, a 20-second default
   timeout, and evidence artifacts under `tmp/`.

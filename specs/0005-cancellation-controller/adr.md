@@ -117,7 +117,7 @@ Unlinking is part of the cancellation scope's own cleanup; that scope's actual
 completion is after its unlinking finishes. A resource scope nested inside
 cancellation can observe the child signal and release before unlinking.
 Reversing the order can make the resource observe the parent signal and unlink
-before release. The [order test](../../tests/contexts.test.ts) is a bounded
+before release. The [order test](../../tests/unit/contexts.test.ts) is a bounded
 example, not a theorem about every resource or schedule.
 
 For compatible inert transformations, regrouping layers can preserve selected
@@ -371,8 +371,8 @@ accepted follow-on changes them.
 
 - [Current cancellation owner](../../src/CancellationController.ts).
 - [Current cancellation scope](../../src/utils.ts).
-- [Directional cancellation cases](../../tests/cancellation.test.ts).
-- [Scope and order cases](../../tests/contexts.test.ts).
+- [Directional cancellation cases](../../tests/unit/cancellation.test.ts).
+- [Scope and order cases](../../tests/unit/contexts.test.ts).
 - [Target-to-case bindings](cases.yml).
 
 ## More Information
@@ -393,7 +393,7 @@ release. No browser execution or consumer integration is implied by acceptance.
 | ----------------------- | --------------------------------------------------- | ------------ | ------------------------------------------------------ |
 | Existing local policies | [ADR-0002](../0002-cancellation-and-waiting/adr.md) | Requirements | Active; evidence is partial                            |
 | Earlier candidate       | [Owner](../../src/CancellationController.ts)        | Whole file   | Earlier public shape and post-close behavior changed   |
-| Composition evidence    | [Tests](../../tests/contexts.test.ts)               | Order case   | Candidate test is bounded, not independent conformance |
+| Composition evidence    | [Tests](../../tests/unit/contexts.test.ts)          | Order case   | Candidate test is bounded, not independent conformance |
 
 **Summary:** This draft proposes independent provider requirements and
 identifies current implementation differences. No target is accepted or verified
@@ -409,10 +409,10 @@ evidence before any decision is accepted.
 
 **Findings:**
 
-| Finding                | Files                                       | Lines         | Assessment                                                     |
-| ---------------------- | ------------------------------------------- | ------------- | -------------------------------------------------------------- |
-| Link and failure roles | [Cases](../../tests/cancellation.test.ts)   | Failure cases | Local cases exercise setup, unlink, and nested failure roles   |
-| Consumer integration   | [Scope cases](../../tests/contexts.test.ts) | Whole file    | Timer and lifecycle ownership are not yet independently tested |
+| Finding                | Files                                            | Lines         | Assessment                                                     |
+| ---------------------- | ------------------------------------------------ | ------------- | -------------------------------------------------------------- |
+| Link and failure roles | [Cases](../../tests/unit/cancellation.test.ts)   | Failure cases | Local cases exercise setup, unlink, and nested failure roles   |
+| Consumer integration   | [Scope cases](../../tests/unit/contexts.test.ts) | Whole file    | Timer and lifecycle ownership are not yet independently tested |
 
 **Summary:** The candidate at this review used a private owner and retained the
 accepted body-versus-cleanup failure distinction. Local test evidence did not
@@ -427,10 +427,10 @@ need, and retain proposed status until the targets are reviewed.
 
 **Findings:**
 
-| Finding                   | Files                                                                                        | Lines              | Assessment                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------- |
-| Independently owned links | [Controller](../../src/CancellationController.ts), [cases](../../tests/cancellation.test.ts) | Dynamic cases      | Public candidate supports attachment and individual detach |
-| Downstream adoption       | [Waiting proposal](../0006-waiting-and-owned-completion/adr.md)                              | Integration review | Timer and lifecycle integration remain unverified          |
+| Finding                   | Files                                                                                             | Lines              | Assessment                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------- |
+| Independently owned links | [Controller](../../src/CancellationController.ts), [cases](../../tests/unit/cancellation.test.ts) | Dynamic cases      | Public candidate supports attachment and individual detach |
+| Downstream adoption       | [Waiting proposal](../0006-waiting-and-owned-completion/adr.md)                                   | Integration review | Timer and lifecycle integration remain unverified          |
 
 **Summary:** A long-lived domain object needs independently controlled link
 lifetimes, invalidating the earlier scope-only assumption. Local cases do not
@@ -445,11 +445,11 @@ public contract and its bounded evidence before acceptance.
 
 **Findings:**
 
-| Finding             | Files                                                                                        | Lines                     | Assessment                                                                  |
-| ------------------- | -------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------- |
-| Controller contract | [Controller](../../src/CancellationController.ts), [cases](../../tests/cancellation.test.ts) | Dynamic and failure cases | Public native authority and owned link policies were reviewed and selected  |
-| Local evidence      | [Cases](cases.yml)                                                                           | All cases                 | Runtime and type cases are bounded; integration evidence remains incomplete |
-| Execution decision  | [ADR-0003](../0003-owned-execution/adr.md)                                                   | Requirements              | Acceptance here does not change the active execution obligations            |
+| Finding             | Files                                                                                             | Lines                     | Assessment                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------- |
+| Controller contract | [Controller](../../src/CancellationController.ts), [cases](../../tests/unit/cancellation.test.ts) | Dynamic and failure cases | Public native authority and owned link policies were reviewed and selected  |
+| Local evidence      | [Cases](cases.yml)                                                                                | All cases                 | Runtime and type cases are bounded; integration evidence remains incomplete |
+| Execution decision  | [ADR-0003](../0003-owned-execution/adr.md)                                                        | Requirements              | Acceptance here does not change the active execution obligations            |
 
 **Summary:** The public controller decision is accepted following review of the
 long-lived ownership use case, native compatibility, duplicate links, cleanup

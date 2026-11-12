@@ -34,16 +34,12 @@
   },
   "scripts": {
     "prepare": "tsc -p ./tsconfig.build.json",
-    "build": "shx rm -rf ./dist && tsc -p ./tsconfig.build.json",
+    "build": "node ./scripts/build.mjs",
     "postversion": "npm install --package-lock-only --ignore-scripts --silent",
     "tsx": "tsx",
     "test": "node ./scripts/test.mjs",
     "lint": "matrixai-lint --check",
-    "lintfix": "matrixai-lint --fix",
-    "typecheck": "tsc -p ./tsconfig.json",
-    "check:portable": "node --experimental-import-meta-resolve ./scripts/check-portable.mjs",
-    "check:conformance": "npm run build && npm run typecheck && npm test -- --no-file-parallelism",
-    "check": "npm run check:conformance && npm run lint"
+    "lintfix": "matrixai-lint --fix"
   },
   "dependencies": {
     "@matrixai/contexts": "git+ssh://git@github.com/MatrixAI/js-contexts.git#v4.0.0"
@@ -54,7 +50,6 @@
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/node": "^24.19.0",
     "@vitest/coverage-v8": "5.1.0",
-    "shx": "^0.3.4",
     "tsx": "^4.19.3",
     "typescript": "~5.9.3",
     "vitest": "5.1.0"

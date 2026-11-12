@@ -133,8 +133,8 @@ historical, not a shared-edition adoption.
 - [Cancellation implementation](../../src/utils.ts).
 - [Waiting implementation](../../src/utils.ts).
 - [Facade implementation](../../src/PromiseCancellable.ts).
-- [Cancellation tests](../../tests/cancellation.test.ts).
-- [Waiting and facade tests](../../tests/PromiseCancellable.test.ts).
+- [Cancellation tests](../../tests/unit/cancellation.test.ts).
+- [Waiting and facade tests](../../tests/unit/PromiseCancellable.test.ts).
 
 ## More Information
 
@@ -149,11 +149,11 @@ wrapper can join arbitrary work that was not returned or explicitly owned.
 
 **Findings:**
 
-| Finding                 | Files                                                                         | Lines        | Assessment                                               |
-| ----------------------- | ----------------------------------------------------------------------------- | ------------ | -------------------------------------------------------- |
-| Sources and links       | [Source](../../src/utils.ts), [tests](../../tests/cancellation.test.ts)       | Whole files  | Direction and cleanup have local candidate cases         |
-| Waiting and facade      | [Source](../../src/utils.ts), [tests](../../tests/PromiseCancellable.test.ts) | Whole files  | Borrowed waiting is distinct from represented completion |
-| Historical test receipt | [Earlier mapping](../0001-execution-ontology-and-semantics/conformance.yml)   | Verification | Dirty snapshot only; no current revision verification    |
+| Finding                 | Files                                                                              | Lines        | Assessment                                               |
+| ----------------------- | ---------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------- |
+| Sources and links       | [Source](../../src/utils.ts), [tests](../../tests/unit/cancellation.test.ts)       | Whole files  | Direction and cleanup have local candidate cases         |
+| Waiting and facade      | [Source](../../src/utils.ts), [tests](../../tests/unit/PromiseCancellable.test.ts) | Whole files  | Borrowed waiting is distinct from represented completion |
+| Historical test receipt | [Earlier mapping](../0001-execution-ontology-and-semantics/conformance.yml)        | Verification | Dirty snapshot only; no current revision verification    |
 
 **Summary:** The decision is locally accepted. Existing cases support a bounded
 review but do not establish current package, consumer, or provider conformance.

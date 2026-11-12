@@ -19,10 +19,10 @@ const config = defineConfig({
   ],
   test: {
     environment: 'node',
-    include: ['tests/**/*.{test,spec}.{ts,tsx,js,jsx}'],
+    include: ['tests/unit/**/*.{test,spec}.{ts,tsx,js,jsx}'],
     typecheck: {
       enabled: true,
-      include: ['tests/**/*.{test,spec}-d.?(c|m)[jt]s?(x)'],
+      include: ['tests/unit/**/*.{test,spec}-d.?(c|m)[jt]s?(x)'],
     },
     pool: 'forks',
     maxWorkers: 4,

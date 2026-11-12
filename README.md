@@ -146,8 +146,10 @@ Source imports are relative; tests run through the compiled package mapping.
 
 ```sh
 nix run '.#npm' -- install --ignore-scripts --no-audit --fund=false --prefer-offline
-npm run check:conformance
-nix build '.#npm-package' '.#checks.x86_64-linux.verify' --no-link
+npm run build
+npm test
+npm run lint
+nix build '.#npm-package' '.#checks.x86_64-linux.unit-js' --no-link
 ```
 
 Run installation from the repository's physical working directory, without a
@@ -162,9 +164,10 @@ The producer exports the canonical npm archive, an unpacked view, package
 metadata, and direct runtime-provider descriptors. It does not bundle runtime
 dependencies or rewrite its packed manifest to local/store coordinates.
 
-The integrated development environment and independent Nix checks share package
-scripts, not mutable state. Activation does not install dependencies, load
-credentials, or change shell options. Lint is supplied by the selected package
-set; use `matrixai-lint --fix` for development or `matrixai-lint --check` for
-verification. Historical generated API documentation is not the candidate
-contract and is excluded from the package.
+All ordinary Node tests, including provider-composition cases, are under
+`tests/unit` and run with `npm test`. The integrated development environment and
+independent Nix checks share package scripts, not mutable state. Activation does
+not install dependencies, load credentials, or change shell options. Lint is
+supplied by the selected package set; use `matrixai-lint --fix` for development
+or `matrixai-lint --check` for verification. Historical generated API
+documentation is not the candidate contract and is excluded from the package.
