@@ -165,9 +165,15 @@ metadata, and direct runtime-provider descriptors. It does not bundle runtime
 dependencies or rewrite its packed manifest to local/store coordinates.
 
 All ordinary Node tests, including provider-composition cases, are under
-`tests/unit` and run with `npm test`. The integrated development environment and
-independent Nix checks share package scripts, not mutable state. Activation does
-not install dependencies, load credentials, or change shell options. Lint is
-supplied by the selected package set; use `matrixai-lint --fix` for development
-or `matrixai-lint --check` for verification. Historical generated API
-documentation is not the candidate contract and is excluded from the package.
+`tests/unit` and run with `npm test`. Tests build incrementally without
+cleaning; use `npm test -- --prebuilt` to reuse an existing distribution without
+compiling. Run a clean `npm run build` after source files are removed or
+renamed, since incremental compilation does not remove old output. The Nix
+package and unit check consume the same cached build. Lint is a separate check
+and does not run as part of the unit check. The integrated development
+environment and independent Nix checks share package scripts, not mutable state.
+Activation does not install dependencies, load credentials, or change shell
+options. Lint is supplied by the selected package set; use `matrixai-lint --fix`
+for development or `matrixai-lint --check` for verification. Historical
+generated API documentation is not the candidate contract and is excluded from
+the package.

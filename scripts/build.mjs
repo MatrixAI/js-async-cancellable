@@ -13,6 +13,8 @@ const projectPath = path.dirname(
 /* eslint-disable no-console */
 async function main(argv = process.argv) {
   argv = argv.slice(2);
+  const clean = !argv.includes('--no-clean');
+  argv = argv.filter((arg) => arg !== '--no-clean');
   const compiler = url.fileURLToPath(import.meta.resolve('typescript/bin/tsc'));
   const tscArgs = [
     compiler,
@@ -20,7 +22,9 @@ async function main(argv = process.argv) {
     path.join(projectPath, 'tsconfig.build.json'),
     ...argv,
   ];
-  fs.rmSync(path.join(projectPath, 'dist'), { recursive: true, force: true });
+  if (clean) {
+    fs.rmSync(path.join(projectPath, 'dist'), { recursive: true, force: true });
+  }
   console.error('Running tsc:');
   console.error([process.execPath, ...tscArgs].join(' '));
   childProcess.execFileSync(process.execPath, tscArgs, {

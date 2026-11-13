@@ -5,6 +5,9 @@
   system,
   gitignore,
   npmDependencies,
+  libraryBuild,
+  installedDependencies,
+  setupDependencies,
 }:
 let
   src = gitignore.gitignoreSource ../..;
@@ -14,8 +17,10 @@ let
       nodejs
       system
       src
+      libraryBuild
+      installedDependencies
+      setupDependencies
       ;
-    inherit (npmDependencies) npmDeps npmConfigHook;
   };
   lintCheck = lint.mkCheck {
     inherit src;

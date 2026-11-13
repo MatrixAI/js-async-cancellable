@@ -3,6 +3,7 @@
   nodejs,
   gitignore,
   npmDependencies,
+  libraryBuild,
   runtimeProviders,
   sourceProvenance,
 }:
@@ -20,13 +21,14 @@ pkgs.buildNpmPackage {
     "unpacked"
   ];
   inherit (npmDependencies) npmDeps npmConfigHook;
-  npmBuildScript = "build";
+  dontNpmBuild = true;
 
   # The importNpmLock hook restores these after its temporary source rewrites.
   # Fail before compilation/packing if that hook's contract ever changes.
   preBuild = ''
     cmp package.json ${../package.json}
     cmp package-lock.json ${../package-lock.json}
+    cp -R ${libraryBuild}/dist dist
   '';
 
   installPhase = ''

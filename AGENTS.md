@@ -9,9 +9,10 @@
 - Golden commands are `npm run build`, `npm test`, `npm run lint`, and
   `nix flake check`. Use Vitest compile-time tests alongside runtime tests
   rather than a separate package-consumer test.
-- Use the build-first Vitest runner with explicit test imports as a project
-  exception to the library profile, standard decorators, a 20-second default
-  timeout, and evidence artifacts under `tmp/`.
+- Use Vitest with explicit test imports as a project exception to the library
+  profile, standard decorators, a 20-second default timeout, and evidence
+  artifacts under `tmp/`. Local tests build incrementally without cleaning;
+  hermetic checks use the prebuilt option. The normal build cleans first.
 - Repository override: documentation is handwritten Markdown. Do not regenerate
   TypeDoc output. Historical generated documentation is not the current API.
 - Obtain MatrixAI lint from the selected package set, sharing one bundled
