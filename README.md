@@ -4,12 +4,11 @@ Cancellation-aware promises and a reusable cancellation provider.
 
 ## Compatibility and status
 
-Version 4 consumes the contexts v4.0.0 Git producer. It breaks version 3 APIs
-and behavior: the owned-execution helpers and public waiting helper are removed,
-and promise construction, waiting, and continuation semantics have changed. A
-dependency upgrade is not a substitute for consumer migration and verification.
-This version is not a release or publication authorization for subsequent
-changes. The named facade additions below are unreleased.
+Version 4.1.1 selects the contexts v4.1.0 Git producer. Version 4 breaks version
+3 APIs and behavior: the owned-execution helpers and public waiting helper are
+removed, and promise construction, waiting, and continuation semantics have
+changed. A dependency upgrade is not a substitute for consumer migration and
+verification. The named facade additions below were introduced in version 4.1.0.
 
 Version 3 was a breaking redesign against contexts v3.0.0. Consumers of the
 version 2 controller/chaining contract must migrate deliberately. The current
