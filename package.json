@@ -1,6 +1,6 @@
 {
   "name": "@matrixai/async-cancellable",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "author": "Roger Qiu",
   "description": "Scoped cancellation providers and explicit cancellable waiting",
   "keywords": [
