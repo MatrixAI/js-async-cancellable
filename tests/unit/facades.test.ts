@@ -20,8 +20,13 @@ describe('cancellation function and method facades', () => {
   test('package subpaths expose the named function and decorator', async () => {
     const functions = await import('@matrixai/async-cancellable/functions');
     const decorators = await import('@matrixai/async-cancellable/decorators');
+    const index = await import('@matrixai/async-cancellable/index.js');
+    const nested =
+      await import('@matrixai/async-cancellable/functions/index.js');
     expect(functions.cancellable).toBe(cancellableFunction);
     expect(decorators.cancellable).toBe(cancellable);
+    expect(index.PromiseCancellable).toBe(PromiseCancellable);
+    expect(nested.cancellable).toBe(cancellableFunction);
   });
 
   test('preserves receiver, argument order, context fields, and method parity', async () => {

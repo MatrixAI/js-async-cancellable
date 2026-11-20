@@ -27,7 +27,12 @@
     "./decorators": {
       "types": "./dist/decorators/index.d.ts",
       "import": "./dist/decorators/index.js"
-    }
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    },
+    "./*": "./dist/*"
   },
   "imports": {
     "#*": "./dist/*"
