@@ -37,7 +37,13 @@
           npmSources = import ./nix/npm-sources.nix {
             inherit system packageLock;
             selections = {
+              "node_modules/@matrixai/async-cancellable".name = "@matrixai/async-cancellable";
+              "node_modules/@matrixai/async-init".name = "@matrixai/async-init";
+              "node_modules/@matrixai/async-locks".name = "@matrixai/async-locks";
               "node_modules/@matrixai/contexts".name = "@matrixai/contexts";
+              "node_modules/@matrixai/errors".name = "@matrixai/errors";
+              "node_modules/@matrixai/events".name = "@matrixai/events";
+              "node_modules/@matrixai/timer".name = "@matrixai/timer";
             };
           };
           npm = import ./nix/npm-install.nix {

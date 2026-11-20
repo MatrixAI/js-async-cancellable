@@ -42,17 +42,19 @@ function cancellable<
     if (index < 0 || index >= args.length) {
       throw new RangeError('The selected context argument is missing');
     }
-    const outer = args[index];
-    assertContextRecord(outer);
-    // Snapshot before acquiring the parent link: even a proxy that passes the
-    // record checks can throw while its enumerable properties are being read.
-    const snapshot = { ...outer } as { signal?: AbortSignal };
-    const controller = new CancellationController(snapshot.signal);
-    const forwarded: unknown[] = [...args];
-    forwarded[index] = { ...snapshot, signal: controller.signal };
+    // Validate and snapshot before acquiring the parent link. Descriptor reads
+    // do not invoke getters, but proxy traps can still fail during validation.
+    const descriptors = contextDescriptors(args[index]);
+    const parentSignal = descriptors.get('signal')?.value as
+      AbortSignal | undefined;
+    const controller = new CancellationController(parentSignal);
     const completion = bracketResource(
       () => controller,
-      () => scoped.apply(this, forwarded as Args),
+      () => {
+        const forwarded: unknown[] = [...args];
+        forwarded[index] = projectContext(descriptors, controller.signal);
+        return scoped.apply(this, forwarded as Args);
+      },
       (owned) => owned.close(),
     );
     return PromiseCancellable.from(completion, {
@@ -67,8 +69,10 @@ function cancellable<
   return wrapped;
 }
 
-/** Validate the ordinary-data projection accepted by a contexts scope. */
-function assertContextRecord(value: unknown): asserts value is object {
+/** Snapshot the ordinary own data accepted by a contexts scope. */
+function contextDescriptors(
+  value: unknown,
+): Map<PropertyKey, PropertyDescriptor> {
   if (value == null || typeof value !== 'object') {
     throw new TypeError(
       'ContextScope projection requires an ordinary data record',
@@ -80,14 +84,44 @@ function assertContextRecord(value: unknown): asserts value is object {
       'ContextScope projection does not clone object instances',
     );
   }
+  const descriptors = new Map<PropertyKey, PropertyDescriptor>();
   for (const key of Reflect.ownKeys(value)) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
-    if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
-      throw new TypeError(
-        'ContextScope projection requires enumerable own data fields',
-      );
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor == null || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError('ContextScope projection requires own data fields');
     }
+    descriptors.set(key, descriptor);
   }
+  return descriptors;
+}
+
+/** Replace the signal once, retaining the contexts scope descriptor policy. */
+function projectContext(
+  descriptors: Map<PropertyKey, PropertyDescriptor>,
+  signal: AbortSignal,
+): object {
+  descriptors.set('signal', {
+    value: signal,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+  const projected = {};
+  for (const [key, descriptor] of descriptors) {
+    Object.defineProperty(
+      projected,
+      key,
+      descriptor.enumerable
+        ? {
+            value: descriptor.value,
+            enumerable: true,
+            writable: true,
+            configurable: true,
+          }
+        : descriptor,
+    );
+  }
+  return projected;
 }
 
 export { cancellable };

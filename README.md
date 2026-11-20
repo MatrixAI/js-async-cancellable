@@ -54,9 +54,9 @@ upstream abortion.
 
 ### Named cancellation authoring forms
 
-The unreleased function and standard method forms select a required ordinary
-context argument explicitly. Each invocation links a local cancellation source
-to the borrowed parent signal and retains work and cleanup until completion:
+The function and standard method forms select a required ordinary context
+argument explicitly. Each invocation links a local cancellation source to the
+borrowed parent signal and retains work and cleanup until completion:
 
 ```ts
 import { cancellable } from '@matrixai/async-cancellable/functions';
@@ -132,11 +132,12 @@ Contexts supplies the generic function and method adapters. Applications select
 their transformation and ordering; cancellation does not grant lifecycle
 admission, schedule a timer, or prove a timer handler has finished. Ambient
 transport and inspection are optional and are not required by this provider. The
-scope projects ordinary enumerable data records only. It cannot accept an
-already-admitted lifecycle context with non-enumerable metadata. Apply
-projection before admission, or use a provider-selected exact transformation
-with a valid lifecycle policy; do not copy hidden admission authority. Real
-lifecycle-provider integration remains unverified.
+scope and named facades project ordinary own data properties, including hidden
+string and symbol properties. They reject accessors and nonordinary prototypes.
+Hidden descriptors are retained; enumerable data uses spread-style descriptor
+flags. Projection preserves capability references but does not create or extend
+lifecycle admission. Its provider remains responsible for validating admission
+and revoking it at the correct completion boundary.
 
 ## Development and package production
 

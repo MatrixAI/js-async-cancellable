@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
+import { LifecycleGate } from '@matrixai/async-init/lifecycle/index.js';
 import { cancellable as cancellableFunction } from '#functions/index.js';
 import { cancellable } from '#decorators/index.js';
 import { PromiseCancellable } from '#index.js';
@@ -55,6 +56,106 @@ describe('cancellation function and method facades', () => {
     expect(seen[0]).not.toBe(parent.signal);
     expect(seen[1]).not.toBe(parent.signal);
     expect(seen[0]).not.toBe(seen[1]);
+  });
+
+  test('both facades retain hidden descriptors and replace a non-configurable signal', async () => {
+    const admission = Symbol('admission');
+    const token = {};
+    const parent = new AbortController();
+    const outer = Object.create(null) as RequestContext & {
+      [admission]: object;
+    };
+    Object.defineProperties(outer, {
+      trace: {
+        value: 'trace',
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      },
+      signal: {
+        value: parent.signal,
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      },
+      hidden: {
+        value: token,
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      },
+      [admission]: {
+        value: token,
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      },
+    });
+    async function inspect(context: RequestContext) {
+      expect(context).not.toBe(outer);
+      expect(context.signal).not.toBe(parent.signal);
+      expect(Object.getOwnPropertyDescriptor(context, admission)).toEqual(
+        Object.getOwnPropertyDescriptor(outer, admission),
+      );
+      expect(Object.getOwnPropertyDescriptor(context, 'hidden')).toEqual(
+        Object.getOwnPropertyDescriptor(outer, 'hidden'),
+      );
+      expect(Object.getOwnPropertyDescriptor(context, 'trace')).toEqual({
+        value: 'trace',
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      return context.trace;
+    }
+    const run = cancellableFunction(inspect, { context: 0 });
+    class Service {
+      @cancellable({ context: 0 })
+      async run(context: RequestContext) {
+        return inspect(context);
+      }
+    }
+    await expect(run(outer)).resolves.toBe('trace');
+    await expect(new Service().run(outer)).resolves.toBe('trace');
+    expect(outer.signal).toBe(parent.signal);
+  });
+
+  test('both facades carry active lifecycle admission without reviving stale tokens', async () => {
+    const gate = new LifecycleGate();
+    const original = { trace: 'lifecycle' };
+    const projected: RequestContext[] = [];
+    async function inspect(context: RequestContext): Promise<string> {
+      expect(gate.currentAccess(context)).toBe('reader');
+      projected.push(context);
+      return gate.runReader((nested) => {
+        expect(gate.currentAccess(nested)).toBe('reader');
+        return context.trace;
+      }, context);
+    }
+    const run = cancellableFunction(inspect, { context: 0 });
+    class Service {
+      @cancellable({ context: 0 })
+      async run(context: RequestContext) {
+        return inspect(context);
+      }
+    }
+    await gate.runReader(async (admitted) => {
+      const context = admitted as RequestContext;
+      await expect(run(context)).resolves.toBe('lifecycle');
+      await expect(new Service().run(context)).resolves.toBe('lifecycle');
+      expect(projected).toHaveLength(2);
+    }, original);
+    expect(projected.map((context) => gate.currentAccess(context))).toEqual([
+      undefined,
+      undefined,
+    ]);
+    await gate.runWriter((admitted) => {
+      expect(gate.currentAccess(admitted)).toBe('writer');
+      for (const stale of projected) {
+        expect(gate.currentAccess(stale)).toBeUndefined();
+        expect(gate.tryRunReaderSync(() => 'bypassed', stale)).toBeUndefined();
+      }
+    }, original);
   });
 
   test('local cancellation does not settle before body and cleanup or cancel siblings', async () => {
@@ -168,6 +269,12 @@ describe('cancellation function and method facades', () => {
     const run = unchecked(body, { context: 0 });
     expect(() => run()).toThrow(RangeError);
     expect(() => run(new Date())).toThrow(TypeError);
+    expect(() => run(null)).toThrow(TypeError);
+    expect(() => run([])).toThrow(TypeError);
+    const getter = vi.fn(() => 'trace');
+    const accessor = Object.defineProperty({}, 'trace', { get: getter });
+    expect(() => run(accessor)).toThrow(TypeError);
+    expect(getter).not.toHaveBeenCalled();
     expect(body).not.toHaveBeenCalled();
   });
 
@@ -211,9 +318,9 @@ describe('cancellation function and method facades', () => {
     const context = new Proxy(
       { trace: 'test', signal: parent.signal },
       {
-        get(target, key, receiver) {
+        getOwnPropertyDescriptor(target, key) {
           if (key === 'trace') throw failure;
-          return Reflect.get(target, key, receiver);
+          return Reflect.getOwnPropertyDescriptor(target, key);
         },
       },
     );
@@ -230,5 +337,20 @@ describe('cancellation function and method facades', () => {
     expect(thrown).toBe(failure);
     expect(add).not.toHaveBeenCalled();
     add.mockRestore();
+  });
+
+  test('reads validated descriptor values without invoking proxy get traps', async () => {
+    const get = vi.fn(() => {
+      throw new Error('unexpected property read');
+    });
+    const context = new Proxy({ trace: 'test' }, { get });
+    const run = cancellableFunction(
+      async (value: RequestContext) => value.trace,
+      {
+        context: 0,
+      },
+    );
+    await expect(run(context)).resolves.toBe('test');
+    expect(get).not.toHaveBeenCalled();
   });
 });
