@@ -3,7 +3,7 @@
   nodejs,
   system,
   src,
-  libraryBuild,
+  npmBuild,
   installedDependencies,
   setupDependencies,
 }:
@@ -24,7 +24,7 @@ pkgs.stdenv.mkDerivation {
     chmod -R u+w tmp/vitest/package
     rm node_modules/vitest
     ln -s ../tmp/vitest/package node_modules/vitest
-    ln -s ${libraryBuild}/dist dist
+    ln -s ${npmBuild}/dist dist
     npm test -- --prebuilt
     runHook postCheck
   '';

@@ -3,29 +3,20 @@
   nodejs,
   lint,
   system,
-  gitignore,
-  npmDependencies,
-  libraryBuild,
-  installedDependencies,
-  setupDependencies,
+  npmLibrary,
 }:
 let
-  src = gitignore.gitignoreSource ../..;
   unit-js = import ./unit-js.nix {
-    inherit
-      pkgs
-      nodejs
-      system
-      src
-      libraryBuild
-      installedDependencies
-      setupDependencies
-      ;
+    inherit pkgs nodejs system;
+    src = npmLibrary.src;
+    npmBuild = npmLibrary.npmBuild;
+    installedDependencies = npmLibrary.installedDependencies;
+    setupDependencies = npmLibrary.setupDependencies;
   };
   lintCheck = lint.mkCheck {
-    inherit src;
+    src = npmLibrary.src;
     name = "async-cancellable-lint";
-    npmDependencies = npmDependencies // {
+    npmDependencies = npmLibrary.npmDependencies // {
       inherit nodejs;
     };
   };

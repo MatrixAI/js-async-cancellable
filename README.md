@@ -142,10 +142,12 @@ and revoking it at the correct completion boundary.
 ## Development and package production
 
 Use Node.js 24 or newer. The package emits one ES2022/NodeNext ESM artifact.
-Source imports are relative; tests run through the compiled package mapping.
+Source imports are relative; tests run through the compiled package mapping. Run
+the following in the integrated development shell, where npm uses the shared
+prepared-archive wrapper:
 
 ```sh
-nix run '.#npm' -- install --ignore-scripts --no-audit --fund=false --prefer-offline
+npm ci
 npm run build
 npm test
 npm run lint
@@ -162,7 +164,9 @@ producer descriptor, and supplies the same prepared archive to native npm and
 the hermetic import adapter. There is no second contexts flake input/pin graph.
 The producer exports the canonical npm archive, an unpacked view, package
 metadata, and direct runtime-provider descriptors. It does not bundle runtime
-dependencies or rewrite its packed manifest to local/store coordinates.
+dependencies or rewrite its packed manifest to local/store coordinates. The
+build excludes the test-only lifecycle dependency from its dependency
+projection; development installs and checks still use the complete lockfile.
 
 All ordinary Node tests, including provider-composition cases, are under
 `tests/unit` and run with `npm test`. Tests build incrementally without
