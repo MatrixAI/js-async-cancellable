@@ -52,7 +52,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.13",
     "@babel/plugin-proposal-decorators": "^7.29.7",
-    "@matrixai/async-init": "git+ssh://git@github.com/MatrixAI/js-async-init.git#semver:^5.1.1",
+    "@matrixai/async-init": "git+ssh://git@github.com/MatrixAI/js-async-init.git#semver:^5.1.2",
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/node": "^24.19.0",
     "@vitest/coverage-v8": "5.1.0",
