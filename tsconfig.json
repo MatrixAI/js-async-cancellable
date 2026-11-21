@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "rootDir": ".",
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/tsbuildinfo",
     "incremental": true,
@@ -8,17 +9,18 @@
     "allowJs": true,
     "strictNullChecks": true,
     "noImplicitAny": false,
-    "experimentalDecorators": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleResolution": "NodeNext",
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "ES2022",
-    "baseUrl": "./src",
+    "lib": ["ES2022", "ESNext.Disposable"],
+    "types": ["node"],
+    "verbatimModuleSyntax": true,
     "paths": {
-      "#*": ["*"]
+      "#*": ["./src/*"]
     },
     "skipLibCheck": true,
     "noEmit": true
@@ -28,6 +30,7 @@
     "./src/**/*.json",
     "./tests/**/*",
     "./scripts/**/*",
+    "./*.mjs",
     "./benches/**/*"
   ]
 }
