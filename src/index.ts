@@ -1,2 +1,3 @@
+export { default as CancellationController } from './CancellationController.js';
 export { default as PromiseCancellable } from './PromiseCancellable.js';
-export type * from './types.js';
+export { createCancellationScope } from './utils.js';

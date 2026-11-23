@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "root": ".",
+  "domains": {
+    "eslint": {
+      "tsconfigPaths": ["./tsconfig.json"],
+      "excludeTargets": ["tests/fixtures/package/types.ts"]
+    }
+  }
+}
